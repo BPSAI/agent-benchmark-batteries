@@ -1,0 +1,54 @@
+# Deny-list for the content scanner (see governance/check_denylist.py).
+#
+# One regex per non-comment, non-blank line. Matching is case-insensitive
+# and applies to every tracked file EXCEPT the allowlisted section carved
+# out below. A match anywhere fails CI.
+#
+# Categories:
+#   - Internal product/codename vocabulary that must never appear here.
+#     This repo ships ONLY the fixtures_v3 / matched-pairs coding battery;
+#     it must never reference the confidential metis-reasoning fixture
+#     family, internal project codenames, or internal decision-record ids.
+#   - Internal infrastructure identifiers (hostnames, registries, secret
+#     prefixes) -- these have no legitimate reason to appear in a public
+#     fixtures/methodology repo at all.
+#   - Credential-shaped strings (API key prefixes) as a defense-in-depth
+#     backstop, independent of GitHub's own secret scanning.
+#   - Personal names, beyond the copyright line in LICENSE (which is
+#     exempted by path below, not by pattern).
+
+# --- internal product / codename vocabulary ---
+# NOTE: "bpsai" and "paircoder" are allowlisted (per-pattern, not per-file)
+# for docs/running-the-battery.md's documented runner-invocation section
+# ONLY -- see ALLOWLIST in check_denylist.py. Every other file, and every
+# other pattern in this list (including in that same file), still applies.
+bpsai
+paircoder
+moltbot
+\bmetis\b
+metis-reasoning
+\bHYP-\d+\b
+\bD-0\d{2}\b
+\ba2a\.
+agentlounge
+agent-lounge
+fixtures_reasoning
+
+# --- internal infrastructure identifiers ---
+azurecr\.io
+\bkv-[a-z0-9-]+\b
+\.paircoder/history
+\.internal\b
+
+# --- credential-shaped strings (defense in depth; GitHub secret scanning is primary) ---
+sk-ant-[a-zA-Z0-9-]+
+sk-proj-[a-zA-Z0-9-]+
+AKIA[0-9A-Z]{16}
+ghp_[a-zA-Z0-9]{36}
+gho_[a-zA-Z0-9]{36}
+
+# --- personal names (beyond the LICENSE copyright line, which is path-exempt) ---
+buschleague
+\bdavid\b
+\bmike\b
+\bashley\b

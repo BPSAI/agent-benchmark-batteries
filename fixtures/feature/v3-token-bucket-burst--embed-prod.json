@@ -1,0 +1,33 @@
+{
+  "difficulty": "hard",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 400,
+    "must_contain": [
+      "def try_consume_burst",
+      "_refill",
+      "test_try_consume_burst_allows_later_cheaper_cost_after_earlier_failure"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-token-bucket-burst--embed-prod",
+  "input_prompt": "The following module (`throttle.py`) is already in production and directly gates every API request against a paying customer's rate-limit plan -- an incorrect refill or an early-exit bug here either throttles paying traffic that should succeed or lets abusive traffic through unmetered.\n\n```python\n\"\"\"Token-bucket rate limiter.\n\nINVARIANT: the bucket's token count is only ever updated by `_refill`\n(based on elapsed time since `last_refilled_at`) and by consumption in\n`try_consume`. No caller should recompute tokens any other way.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef make_bucket(capacity: float, refill_rate_per_s: float, now: float) -> dict:\n    \"\"\"A full bucket at creation time.\"\"\"\n    return {\n        \"capacity\": capacity,\n        \"refill_rate_per_s\": refill_rate_per_s,\n        \"tokens\": capacity,\n        \"last_refilled_at\": now,\n    }\n\n\ndef _refill(bucket: dict, now: float) -> None:\n    \"\"\"Add elapsed-time * refill_rate tokens, capped at `capacity`, and\n    advance `last_refilled_at` to `now`.\"\"\"\n    elapsed = max(0.0, now - bucket[\"last_refilled_at\"])\n    bucket[\"tokens\"] = min(\n        bucket[\"capacity\"], bucket[\"tokens\"] + elapsed * bucket[\"refill_rate_per_s\"],\n    )\n    bucket[\"last_refilled_at\"] = now\n\n\ndef try_consume(bucket: dict, now: float, cost: float = 1.0) -> bool:\n    \"\"\"Refill for elapsed time, then consume `cost` tokens if available.\"\"\"\n    _refill(bucket, now)\n    if bucket[\"tokens\"] < cost:\n        return False\n    bucket[\"tokens\"] -= cost\n    return True\n```\n\nImplement a NEW function `try_consume_burst(bucket, now, costs)` that attempts to consume a LIST of costs against the SAME bucket in one call: call `_refill(bucket, now)` exactly ONCE at the start (not once per item, so refill timing never drifts mid-burst), then greedily attempt each cost in list order, deducting tokens only on success, and returning a list of per-item bools -- a failed item must NOT stop the loop, since a later, cheaper cost may still succeed. Include a regression test named exactly `test_try_consume_burst_allows_later_cheaper_cost_after_earlier_failure` with a bucket that has enough tokens for a cheap cost but not an earlier, more expensive one in the same `costs` list, asserting the cheaper later item still succeeds.",
+  "metadata": {
+    "base_task_id": "v3-token-bucket-burst",
+    "format_axes": {
+      "framing": "production",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-production",
+    "module_name": "throttle.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "feature"
+}

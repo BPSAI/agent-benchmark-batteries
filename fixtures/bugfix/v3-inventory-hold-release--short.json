@@ -1,0 +1,32 @@
+{
+  "difficulty": "hard",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 350,
+    "must_contain": [
+      "def release_hold",
+      "test_release_hold_only_removes_target_hold"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-inventory-hold-release--short",
+  "input_prompt": "`inventory_hold.py` tracks checkout stock holds in a ledger shaped `{\"holds\": {hold_id: {\"sku\", \"qty\", \"placed_at\"}}, \"by_sku\": {sku: [hold_id, ...]}}`. `available_quantity(ledger, sku, on_hand)` subtracts the sum of active holds' `qty` for `sku` from `on_hand`. `release_hold(ledger, hold_id)` currently pops the hold from `ledger[\"holds\"]` but then deletes the ENTIRE `ledger[\"by_sku\"][sku]` list for that hold's sku, instead of removing only `hold_id` from it -- so releasing one hold silently releases every other still-active hold on the same sku too. Fix `release_hold` so it removes only the released hold_id from `ledger[\"by_sku\"][sku]`, leaving other active holds on the same sku untouched. Add a regression test named exactly `test_release_hold_only_removes_target_hold` that places two holds on the SAME sku, releases one, and asserts `available_quantity` still reflects the other hold's reserved quantity.",
+  "metadata": {
+    "base_task_id": "v3-inventory-hold-release",
+    "format_axes": {
+      "framing": "n/a",
+      "structure": "short"
+    },
+    "format_variant": "short",
+    "module_name": "inventory_hold.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "bugfix"
+}

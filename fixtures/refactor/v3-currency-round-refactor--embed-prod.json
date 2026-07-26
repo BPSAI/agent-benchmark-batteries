@@ -1,0 +1,32 @@
+{
+  "difficulty": "medium",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 250,
+    "must_contain": [
+      "def round_currency",
+      "test_round_currency_rounds_half_up_at_the_boundary"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-currency-round-refactor--embed-prod",
+  "input_prompt": "The following module (`pricing.py`) is already in production and computes the exact dollar amount charged to real customers' cards on every order -- cent-level rounding inconsistencies here show up as customer support tickets and accounting reconciliation failures.\n\n```python\n\"\"\"Cart pricing helpers.\n\nEach function independently calls the builtin `round(x, 2)`, which uses\nbanker's rounding on the underlying float representation and produces\ninconsistent cent-boundary results (e.g. some `.005` cases round down).\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef line_item_total(unit_price: float, quantity: int) -> float:\n    \"\"\"unit_price * quantity, rounded to the nearest cent.\"\"\"\n    return round(unit_price * quantity, 2)\n\n\ndef apply_tax(subtotal: float, tax_rate: float) -> float:\n    \"\"\"subtotal * (1 + tax_rate), rounded to the nearest cent.\"\"\"\n    return round(subtotal * (1 + tax_rate), 2)\n\n\ndef compute_invoice_total(line_totals: list, tax_rate: float) -> float:\n    \"\"\"Sum of line_totals, then apply_tax, rounded to the nearest cent.\"\"\"\n    subtotal = round(sum(line_totals), 2)\n    return round(apply_tax(subtotal, tax_rate), 2)\n```\n\nRefactor by extracting a shared helper `round_currency(amount)` that rounds HALF-UP at the cent boundary using `decimal.Decimal` (not the builtin `round`), and have `line_item_total`, `apply_tax`, and `compute_invoice_total` all call it instead of the builtin `round`. Add a regression test named exactly `test_round_currency_rounds_half_up_at_the_boundary` proving `round_currency(2.005)` returns `2.01` (half-up), not `2.00`.",
+  "metadata": {
+    "base_task_id": "v3-currency-round-refactor",
+    "format_axes": {
+      "framing": "production",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-production",
+    "module_name": "pricing.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "refactor"
+}

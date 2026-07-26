@@ -1,0 +1,33 @@
+{
+  "difficulty": "medium",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 250,
+    "must_contain": [
+      "def has_conflict",
+      "ignore_booking_id",
+      "test_has_conflict_ignores_specified_booking_id"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-room-booking-conflict--embed-prod",
+  "input_prompt": "The following module (`room_booking.py`) is already in production and is the only thing standing between double-booked conference rooms and the office -- facilities has escalated several real double-booking incidents this quarter.\n\n```python\n\"\"\"Meeting room booking calendar.\n\nBookings are half-open intervals [start, end) in a room's local minutes\nsince midnight, so back-to-back bookings (one ending exactly when the\nnext starts) never conflict.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef make_calendar() -> dict:\n    \"\"\"{room_id: [{\"booking_id\", \"start\", \"end\"}, ...]}\"\"\"\n    return {}\n\n\ndef book_room(calendar: dict, room_id: str, start: int, end: int, booking_id: str) -> None:\n    \"\"\"Add a booking for `room_id` unconditionally (no conflict check).\"\"\"\n    calendar.setdefault(room_id, []).append(\n        {\"booking_id\": booking_id, \"start\": start, \"end\": end},\n    )\n\n\ndef bookings_for_room(calendar: dict, room_id: str) -> list[dict]:\n    \"\"\"All bookings currently on `room_id`'s calendar.\"\"\"\n    return list(calendar.get(room_id, []))\n\n\ndef cancel_booking(calendar: dict, booking_id: str) -> None:\n    \"\"\"Remove a booking by id from whichever room it's on.\"\"\"\n    for bookings in calendar.values():\n        for b in list(bookings):\n            if b[\"booking_id\"] == booking_id:\n                bookings.remove(b)\n                return\n```\n\nImplement a NEW function `has_conflict(calendar, room_id, start, end, *, ignore_booking_id=None)` for load-shedding: return True if `[start, end)` overlaps any EXISTING booking on `room_id`'s calendar (half-open interval overlap -- back-to-back bookings do not conflict), excluding the booking whose id equals `ignore_booking_id` if given (used when re-checking a booking against itself during a reschedule). Output the full module (existing functions pasted unchanged) plus tests. Include a regression test named exactly `test_has_conflict_ignores_specified_booking_id` proving that passing `ignore_booking_id` equal to an overlapping booking's id makes `has_conflict` return False for that same interval.",
+  "metadata": {
+    "base_task_id": "v3-room-booking-conflict",
+    "format_axes": {
+      "framing": "production",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-production",
+    "module_name": "room_booking.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "feature"
+}

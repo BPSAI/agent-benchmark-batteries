@@ -1,0 +1,33 @@
+{
+  "difficulty": "easy",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 120,
+    "must_contain": [
+      "REDACTED_FIELDS",
+      "phone",
+      "test_mask_record_redacts_phone"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-audit-log-pii-mask--short",
+  "input_prompt": "`audit_redact.py` has `REDACTED_FIELDS = {\"ssn\", \"email\"}` and `mask_record(record)`, which replaces the value of any key in `REDACTED_FIELDS` with `\"***\"`. Add `\"phone\"` to `REDACTED_FIELDS` so phone numbers are masked too. Add a regression test named exactly `test_mask_record_redacts_phone` proving a record containing a `\"phone\"` key has its value replaced with `\"***\"` by `mask_record`.",
+  "metadata": {
+    "base_task_id": "v3-audit-log-pii-mask",
+    "format_axes": {
+      "framing": "n/a",
+      "structure": "short"
+    },
+    "format_variant": "short",
+    "module_name": "audit_redact.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent handling a small maintenance change. Output a single Python file: the updated module followed by pytest tests. Follow every requirement in the prompt literally, including exact names and the exact test name requested.",
+  "task_type": "chore"
+}

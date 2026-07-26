@@ -1,0 +1,35 @@
+{
+  "difficulty": "medium",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 250,
+    "must_contain": [
+      "_clamp_total",
+      "def apply_percentage_coupon",
+      "def apply_fixed_coupon",
+      "test_apply_percentage_coupon_clamps_to_zero",
+      "test_apply_fixed_coupon_clamps_to_zero"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-coupon-stack-refactor--short",
+  "input_prompt": "`coupon.py` has `apply_percentage_coupon(subtotal, percent_off)` and `apply_fixed_coupon(subtotal, amount_off)`. Each independently repeats the same 3-line clamp: `if total < 0: total = 0.0`. Refactor by extracting a shared helper `_clamp_total(total)` that both functions call instead of repeating the clamp inline -- behavior must be unchanged for both coupon types. Add regression tests named exactly `test_apply_percentage_coupon_clamps_to_zero` and `test_apply_fixed_coupon_clamps_to_zero` proving both still clamp to a 0.0 minimum after the refactor.",
+  "metadata": {
+    "base_task_id": "v3-coupon-stack-refactor",
+    "format_axes": {
+      "framing": "n/a",
+      "structure": "short"
+    },
+    "format_variant": "short",
+    "module_name": "coupon.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "refactor"
+}

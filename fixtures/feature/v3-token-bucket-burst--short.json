@@ -1,0 +1,33 @@
+{
+  "difficulty": "hard",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 400,
+    "must_contain": [
+      "def try_consume_burst",
+      "_refill",
+      "test_try_consume_burst_allows_later_cheaper_cost_after_earlier_failure"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-token-bucket-burst--short",
+  "input_prompt": "`throttle.py` implements a token-bucket rate limiter: `make_bucket(capacity, refill_rate_per_s, now)`, a private `_refill(bucket, now)` that adds `elapsed * refill_rate_per_s` tokens (capped at `capacity`) and advances `bucket[\"last_refilled_at\"]`, and `try_consume(bucket, now, cost=1.0)` which calls `_refill` then deducts `cost` if enough tokens are available. Implement a NEW function `try_consume_burst(bucket, now, costs)` that attempts to consume a LIST of costs against the SAME bucket in one call: call `_refill(bucket, now)` exactly ONCE at the start (not once per item, so refill timing never drifts mid-burst), then greedily attempt each cost in list order, deducting tokens only on success, and returning a list of per-item bools -- a failed item must NOT stop the loop, since a later, cheaper cost may still succeed. Include a regression test named exactly `test_try_consume_burst_allows_later_cheaper_cost_after_earlier_failure` with a bucket that has enough tokens for a cheap cost but not an earlier, more expensive one in the same `costs` list, asserting the cheaper later item still succeeds.",
+  "metadata": {
+    "base_task_id": "v3-token-bucket-burst",
+    "format_axes": {
+      "framing": "n/a",
+      "structure": "short"
+    },
+    "format_variant": "short",
+    "module_name": "throttle.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "feature"
+}

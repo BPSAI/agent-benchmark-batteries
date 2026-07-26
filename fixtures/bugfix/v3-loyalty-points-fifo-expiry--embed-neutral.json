@@ -1,0 +1,32 @@
+{
+  "difficulty": "hard",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 350,
+    "must_contain": [
+      "def redeem_points",
+      "test_redeem_points_consumes_oldest_lot_first"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-loyalty-points-fifo-expiry--embed-neutral",
+  "input_prompt": "The following module (`loyalty_ledger.py`) implements a loyalty points ledger with FIFO redemption.\n\n```python\n\"\"\"Loyalty points ledger with FIFO redemption.\n\nPoints are earned in dated \"lots\". `earn_points` appends a new lot.\n\nINVARIANT: `redeem_points` must consume the OLDEST lots first (FIFO) --\nmembers' longest-held points are the ones meant to expire/spend first,\nper the published loyalty terms.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef make_ledger() -> dict:\n    \"\"\"{member_id: [{\"points\", \"earned_at\"}, ...]} -- lots per member,\n    stored in the order they were earned.\"\"\"\n    return {}\n\n\ndef earn_points(ledger: dict, member_id: str, points: int, earned_at: float) -> None:\n    \"\"\"Append a new earn-lot to the back of the member's lot list.\"\"\"\n    ledger.setdefault(member_id, []).append({\"points\": points, \"earned_at\": earned_at})\n\n\ndef balance(ledger: dict, member_id: str) -> int:\n    \"\"\"Sum of all remaining points across the member's lots.\"\"\"\n    return sum(lot[\"points\"] for lot in ledger.get(member_id, []))\n\n\ndef redeem_points(ledger: dict, member_id: str, points: int) -> None:\n    \"\"\"Deduct `points` from the member's balance.\n\n    BUG: iterates the member's lots in REVERSE (`reversed(...)`), so it\n    consumes the NEWEST lot first (LIFO) instead of the oldest (FIFO),\n    directly contradicting the module's documented FIFO invariant --\n    members' oldest points never actually get spent down first.\n    \"\"\"\n    lots = ledger.get(member_id, [])\n    remaining = points\n    for lot in reversed(lots):\n        if remaining <= 0:\n            break\n        take = min(lot[\"points\"], remaining)\n        lot[\"points\"] -= take\n        remaining -= take\n    ledger[member_id] = [lot for lot in lots if lot[\"points\"] > 0]\n```\n\nFix `redeem_points` to iterate the lots in their stored (oldest-first) order instead of reversed, matching the module's documented FIFO invariant. Add a regression test named exactly `test_redeem_points_consumes_oldest_lot_first` with at least two lots of different sizes for the same member, redeeming an amount that only fully drains the OLDEST lot, and asserting the newer lot's points are untouched.",
+  "metadata": {
+    "base_task_id": "v3-loyalty-points-fifo-expiry",
+    "format_axes": {
+      "framing": "neutral",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-neutral",
+    "module_name": "loyalty_ledger.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "bugfix"
+}

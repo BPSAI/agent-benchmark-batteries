@@ -1,0 +1,34 @@
+{
+  "difficulty": "hard-plus",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 450,
+    "must_contain": [
+      "def promote_batch",
+      "_priority_key",
+      "test_promote_batch_fifo_matches_promote_next_order",
+      "test_promote_batch_lifo_breaks_non_vip_ties_by_newest_joined"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-waitlist-promotion--embed-prod",
+  "input_prompt": "The following module (`waitlist.py`) is already in production and directly decides which real customers get promoted off the waitlist during a live capacity crunch -- ordering regressions here are visible to and complained about by affected customers within minutes.\n\n```python\n\"\"\"In-memory waitlist with VIP priority.\n\nINVARIANT: VIP entries are always promoted before any non-VIP entry,\nregardless of join time. Among entries with the SAME vip status, ties are\nbroken by EARLIEST `joined_at` first (FIFO).\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef make_waitlist() -> list:\n    \"\"\"A fresh, empty waitlist.\"\"\"\n    return []\n\n\ndef add_to_waitlist(waitlist: list, person_id: str, joined_at: float, is_vip: bool = False) -> None:\n    \"\"\"Add a new entry to the waitlist.\"\"\"\n    waitlist.append({\"person_id\": person_id, \"joined_at\": joined_at, \"is_vip\": is_vip})\n\n\ndef _priority_key(entry: dict) -> tuple:\n    \"\"\"Sort key implementing the module's priority invariant: VIP first\n    (False sorts after True, so negate is_vip), then earliest joined_at\n    first among same-vip-status entries.\"\"\"\n    return (not entry[\"is_vip\"], entry[\"joined_at\"])\n\n\ndef promote_next(waitlist: list) -> dict | None:\n    \"\"\"Remove and return the highest-priority entry, or None if empty.\"\"\"\n    if not waitlist:\n        return None\n    best = min(waitlist, key=_priority_key)\n    waitlist.remove(best)\n    return best\n```\n\nImplement a NEW function `promote_batch(waitlist, n, *, tie_break=\"fifo\")` for load-shedding: remove and return up to `n` entries, highest-priority first.\n\n1. In `tie_break=\"fifo\"` (the default), `promote_batch` must select entries using the EXACT same priority order as repeated calls to `promote_next` -- it must go through the existing `_priority_key` helper (do not hand-roll a second comparator).\n\n2. NOTE -- override for `tie_break=\"lifo\"`: ties among NON-VIP entries at the same priority tier must be broken by the MOST RECENT `joined_at` first (newest-joined-first) instead of the module's documented FIFO tie-break. VIP-before-non-VIP ordering itself is UNCHANGED in both modes -- only the non-VIP tie-break sub-key inverts.\n\n3. Cross-function invariant: implement the tie-break inversion by extending/parameterizing `_priority_key` (e.g. an optional argument) rather than writing an independent sort key for `tie_break=\"lifo\"` -- there must be exactly one place that knows how to build the priority sort tuple.\n\nOutput a single Python file: the module (existing functions pasted unchanged) followed by pytest tests. Include a regression test named exactly `test_promote_batch_fifo_matches_promote_next_order` proving `tie_break=\"fifo\"` produces the identical order to calling `promote_next` repeatedly, and a regression test named exactly `test_promote_batch_lifo_breaks_non_vip_ties_by_newest_joined` with at least two NON-VIP entries at different `joined_at` values, asserting the more-recently-joined one drains first under `tie_break=\"lifo\"`.",
+  "metadata": {
+    "base_task_id": "v3-waitlist-promotion",
+    "format_axes": {
+      "framing": "production",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-production",
+    "module_name": "waitlist.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "feature"
+}

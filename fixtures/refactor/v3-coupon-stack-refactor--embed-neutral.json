@@ -1,0 +1,35 @@
+{
+  "difficulty": "medium",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 250,
+    "must_contain": [
+      "_clamp_total",
+      "def apply_percentage_coupon",
+      "def apply_fixed_coupon",
+      "test_apply_percentage_coupon_clamps_to_zero",
+      "test_apply_fixed_coupon_clamps_to_zero"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-coupon-stack-refactor--embed-neutral",
+  "input_prompt": "The following module (`coupon.py`) implements coupon application for a cart subtotal.\n\n```python\n\"\"\"Coupon application for a cart subtotal.\n\nBoth coupon types independently repeat the same \"never let the total go\nnegative\" clamp logic.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef apply_percentage_coupon(subtotal: float, percent_off: float) -> float:\n    \"\"\"Apply a percent-off coupon, clamped so the total never goes negative.\"\"\"\n    total = subtotal - (subtotal * percent_off / 100.0)\n    if total < 0:\n        total = 0.0\n    return total\n\n\ndef apply_fixed_coupon(subtotal: float, amount_off: float) -> float:\n    \"\"\"Apply a flat amount-off coupon, clamped so the total never goes negative.\"\"\"\n    total = subtotal - amount_off\n    if total < 0:\n        total = 0.0\n    return total\n```\n\nRefactor by extracting a shared helper `_clamp_total(total)` that both `apply_percentage_coupon` and `apply_fixed_coupon` call instead of repeating the clamp inline -- behavior must be unchanged for both coupon types. Add regression tests named exactly `test_apply_percentage_coupon_clamps_to_zero` and `test_apply_fixed_coupon_clamps_to_zero` proving both still clamp to a 0.0 minimum after the refactor.",
+  "metadata": {
+    "base_task_id": "v3-coupon-stack-refactor",
+    "format_axes": {
+      "framing": "neutral",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-neutral",
+    "module_name": "coupon.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "refactor"
+}

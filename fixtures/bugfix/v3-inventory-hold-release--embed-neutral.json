@@ -1,0 +1,32 @@
+{
+  "difficulty": "hard",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 350,
+    "must_contain": [
+      "def release_hold",
+      "test_release_hold_only_removes_target_hold"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-inventory-hold-release--embed-neutral",
+  "input_prompt": "The following module (`inventory_hold.py`) implements a checkout stock-hold ledger.\n\n```python\n\"\"\"Inventory hold ledger for checkout reservations.\n\nA \"hold\" reserves stock for a sku while a customer completes checkout.\n`available_quantity` subtracts the sum of all ACTIVE holds for a sku from\nthe physical on-hand count, so a stuck or wrongly-cleared hold directly\nmis-prices availability shown to other shoppers.\n\nINVARIANT: releasing one hold_id must affect ONLY that hold's reserved\nquantity. Other active holds on the same sku must be completely\nunaffected by the release.\n\"\"\"\n\nfrom __future__ import annotations\n\n\ndef make_ledger() -> dict:\n    \"\"\"{\"holds\": {hold_id: {...}}, \"by_sku\": {sku: [hold_id, ...]}}\"\"\"\n    return {\"holds\": {}, \"by_sku\": {}}\n\n\ndef place_hold(ledger: dict, sku: str, qty: int, hold_id: str, placed_at: float) -> None:\n    \"\"\"Record a new active hold for `sku`.\"\"\"\n    ledger[\"holds\"][hold_id] = {\"sku\": sku, \"qty\": qty, \"placed_at\": placed_at}\n    ledger[\"by_sku\"].setdefault(sku, []).append(hold_id)\n\n\ndef release_hold(ledger: dict, hold_id: str) -> None:\n    \"\"\"Release a hold: remove it from the active set.\n\n    BUG: drops the ENTIRE `by_sku[sku]` bucket for the released hold's sku\n    instead of removing only `hold_id` from that bucket, so releasing one\n    hold silently releases every other still-active hold on the same sku\n    too -- `available_quantity` then over-reports stock that is actually\n    still reserved by those other holds.\n    \"\"\"\n    hold = ledger[\"holds\"].pop(hold_id, None)\n    if hold is None:\n        return\n    sku = hold[\"sku\"]\n    del ledger[\"by_sku\"][sku]\n\n\ndef list_active_holds(ledger: dict, sku: str) -> list[str]:\n    \"\"\"Active hold_ids for `sku`, in placement order.\"\"\"\n    return list(ledger[\"by_sku\"].get(sku, []))\n\n\ndef available_quantity(ledger: dict, sku: str, on_hand: int) -> int:\n    \"\"\"`on_hand` minus the sum of all active holds' `qty` for `sku`.\"\"\"\n    reserved = sum(ledger[\"holds\"][hid][\"qty\"] for hid in list_active_holds(ledger, sku))\n    return on_hand - reserved\n```\n\nFix `release_hold` so it removes only the specified hold_id's reservation, leaving other active holds on the same sku untouched. Add a regression test named exactly `test_release_hold_only_removes_target_hold` with at least two holds on the SAME sku, releasing one, asserting the other's quantity is still reserved (`available_quantity` reflects only the remaining hold).",
+  "metadata": {
+    "base_task_id": "v3-inventory-hold-release",
+    "format_axes": {
+      "framing": "neutral",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-neutral",
+    "module_name": "inventory_hold.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "bugfix"
+}

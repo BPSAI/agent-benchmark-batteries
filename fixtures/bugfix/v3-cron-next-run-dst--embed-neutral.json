@@ -1,0 +1,33 @@
+{
+  "difficulty": "hard-plus",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 400,
+    "must_contain": [
+      "def next_run_after",
+      "day_length_seconds",
+      "test_next_run_after_uses_actual_day_length_across_dst"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-cron-next-run-dst--embed-neutral",
+  "input_prompt": "The following module (`daily_schedule.py`) implements next-run computation for a daily-at-HH:MM scheduler.\n\n```python\n\"\"\"Next-run computation for a daily-at-HH:MM scheduler.\n\n`day_length_seconds(civil_date)` is injected by the caller and returns\nthe REAL number of seconds in that particular civil calendar day for the\nscheduler's timezone -- 86400 on an ordinary day, but 82800 (23h) or\n90000 (25h) on a spring-forward / fall-back DST transition day. Tests\ninject a synthetic version of this function; the module must never\nassume a day is always 86400 seconds.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom datetime import datetime, timedelta\nfrom typing import Callable\n\n\ndef next_run_after(\n    now: datetime, run_hour: int, run_minute: int,\n    *, day_length_seconds: Callable[[datetime], int],\n) -> datetime:\n    \"\"\"The next datetime at `run_hour:run_minute` strictly after `now`.\n\n    BUG: when today's `run_hour:run_minute` has already passed, this rolls\n    to tomorrow by adding a hardcoded `timedelta(seconds=86400)` instead of\n    calling the injected `day_length_seconds(today)` -- so on a day whose\n    real length isn't 86400 seconds (a DST transition day), the computed\n    \"tomorrow\" run lands an hour early or late.\n    \"\"\"\n    candidate = now.replace(hour=run_hour, minute=run_minute, second=0, microsecond=0)\n    if candidate > now:\n        return candidate\n    tomorrow_start = candidate + timedelta(seconds=86400)\n    return tomorrow_start\n```\n\nFix `next_run_after` to call `day_length_seconds` (passing the candidate day) to get the correct roll-forward duration instead of the hardcoded 86400. Add a regression test named exactly `test_next_run_after_uses_actual_day_length_across_dst` that injects a `day_length_seconds` stub returning 82800 for the relevant day, calls `next_run_after` with `now` just past today's run time, and asserts the returned datetime is exactly 82800 seconds after today's `run_hour:run_minute` (not 86400).",
+  "metadata": {
+    "base_task_id": "v3-cron-next-run-dst",
+    "format_axes": {
+      "framing": "neutral",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-neutral",
+    "module_name": "daily_schedule.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "bugfix"
+}

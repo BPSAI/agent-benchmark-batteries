@@ -1,0 +1,32 @@
+{
+  "difficulty": "medium",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 250,
+    "must_contain": [
+      "def round_currency",
+      "test_round_currency_rounds_half_up_at_the_boundary"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-currency-round-refactor--short",
+  "input_prompt": "`pricing.py` has `line_item_total`, `apply_tax`, and `compute_invoice_total`, each independently calling the builtin `round(x, 2)`, which uses banker's rounding on the underlying float representation and produces inconsistent cent-boundary results (some `.005` cases round down instead of up). Refactor by extracting a shared helper `round_currency(amount)` that rounds HALF-UP at the cent boundary using `decimal.Decimal` (not the builtin `round`), and have all three functions call it instead of the builtin `round`. Add a regression test named exactly `test_round_currency_rounds_half_up_at_the_boundary` proving `round_currency(2.005)` returns `2.01` (half-up), not `2.00`.",
+  "metadata": {
+    "base_task_id": "v3-currency-round-refactor",
+    "format_axes": {
+      "framing": "n/a",
+      "structure": "short"
+    },
+    "format_variant": "short",
+    "module_name": "pricing.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "refactor"
+}

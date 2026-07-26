@@ -1,0 +1,33 @@
+{
+  "difficulty": "easy",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 120,
+    "must_contain": [
+      "REDACTED_FIELDS",
+      "phone",
+      "test_mask_record_redacts_phone"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-audit-log-pii-mask--embed-prod",
+  "input_prompt": "The following module (`audit_redact.py`) is already in production and is the ONLY thing masking PII before records reach the audit log store -- compliance has flagged that unmasked phone numbers are currently leaking into that log.\n\n```python\n\"\"\"Audit log PII redaction.\n\nAny key listed in REDACTED_FIELDS has its value replaced with \"***\"\nbefore a record is written to the audit log.\n\"\"\"\n\nfrom __future__ import annotations\n\nREDACTED_FIELDS = {\"ssn\", \"email\"}\n\n\ndef mask_record(record: dict) -> dict:\n    \"\"\"Return a copy of `record` with every REDACTED_FIELDS value masked.\"\"\"\n    return {\n        key: (\"***\" if key in REDACTED_FIELDS else value)\n        for key, value in record.items()\n    }\n```\n\nAdd `\"phone\"` to `REDACTED_FIELDS` so phone numbers are masked too. Add a regression test named exactly `test_mask_record_redacts_phone` proving a record containing a `\"phone\"` key has its value replaced with `\"***\"` by `mask_record`.",
+  "metadata": {
+    "base_task_id": "v3-audit-log-pii-mask",
+    "format_axes": {
+      "framing": "production",
+      "structure": "embedded"
+    },
+    "format_variant": "embedded-production",
+    "module_name": "audit_redact.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent handling a small maintenance change. Output a single Python file: the updated module followed by pytest tests. Follow every requirement in the prompt literally, including exact names and the exact test name requested.",
+  "task_type": "chore"
+}

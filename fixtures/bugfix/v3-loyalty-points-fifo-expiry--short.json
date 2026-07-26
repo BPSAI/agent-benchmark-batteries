@@ -1,0 +1,32 @@
+{
+  "difficulty": "hard",
+  "expected_shape": {
+    "json_schema_keys": [],
+    "min_length": 350,
+    "must_contain": [
+      "def redeem_points",
+      "test_redeem_points_consumes_oldest_lot_first"
+    ],
+    "must_not_contain": [
+      "TODO"
+    ],
+    "produces_code": true,
+    "required_sections": []
+  },
+  "id": "v3-loyalty-points-fifo-expiry--short",
+  "input_prompt": "`loyalty_ledger.py` stores each member's earned points as an ordered list of dated lots: `{member_id: [{\"points\", \"earned_at\"}, ...]}`, appended in earn order by `earn_points`. The documented INVARIANT is that `redeem_points(ledger, member_id, points)` must consume the OLDEST lots first (FIFO). The current implementation iterates the member's lots with `reversed(...)`, consuming the NEWEST lot first (LIFO) instead -- directly contradicting the invariant, so members' oldest points never actually spend down first. Fix `redeem_points` to iterate the lots in their stored (oldest-first) order instead of reversed. Add a regression test named exactly `test_redeem_points_consumes_oldest_lot_first` with at least two lots of different sizes for the same member, redeeming an amount that only fully drains the OLDEST lot, and asserting the newer lot's points are untouched.",
+  "metadata": {
+    "base_task_id": "v3-loyalty-points-fifo-expiry",
+    "format_axes": {
+      "framing": "n/a",
+      "structure": "short"
+    },
+    "format_variant": "short",
+    "module_name": "loyalty_ledger.py",
+    "provenance": "original-authored",
+    "public_release": true,
+    "source": "authored-fixture-set-v3-2026-07"
+  },
+  "system_prompt": "You are a Driver agent. Output a single Python file: the corrected or extended implementation followed by pytest tests. Follow every requirement in the prompt literally, including exact function names, helper reuse requirements, and the exact test names requested.",
+  "task_type": "bugfix"
+}
