@@ -35,13 +35,16 @@ between them is noise, not a thinking effect.
 
 **The tell is in the reasoning-token counts, not in what you sent.**
 Compare mean reasoning tokens per row across your two arms for each model.
-On this drop's worked panel, two of the five metered models showed exactly
-the pattern you want -- omitting the field drove reasoning tokens to zero:
+Every number below is `tokens_reasoning` averaged over the 30 rows/arm for
+that model in `drop2-thinking-onoff-reference.csv` -- recompute it
+yourself and it will match, because that CSV is the only source for this
+table. Two of the five metered models showed exactly the pattern you
+want -- omitting the field drove reasoning tokens to zero:
 
 | model | reasoning tokens/row, field present | reasoning tokens/row, field absent |
 |---|---|---|
-| a legacy-thinking-shape model | 71.7 | 0.0 |
-| another legacy-thinking-shape model | 1,390.9 | 0.0 |
+| a legacy-thinking-shape model | 153.3 | 0.0 |
+| another legacy-thinking-shape model | 1,527.0 | 0.0 |
 
 Two other models on the same panel showed the adaptive-default pattern --
 reasoning tokens stayed in the same range whether the field was present or
@@ -50,8 +53,8 @@ and the model decided about the same thing both times:
 
 | model | reasoning tokens/row, field present | reasoning tokens/row, field absent |
 |---|---|---|
-| an adaptive-thinking model | 265.7 | 289.0 |
-| another adaptive-thinking model | 102.1 | 104.9 |
+| an adaptive-thinking model | 435.5 | 461.5 |
+| another adaptive-thinking model | 189.2 | 207.9 |
 
 Those two rows are the trap: a naive reading of "I omitted the field" as
 "thinking was off" would report a contrast that never happened. The fix is

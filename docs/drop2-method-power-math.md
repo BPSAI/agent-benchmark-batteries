@@ -22,24 +22,40 @@ pieces of evidence as you have distinct base tasks.
 
 ## The recipe
 
-1. **Pair, don't pool.** For each `fixture_id` present in both arms,
-   compute the per-fixture difference: `on_pass - off_pass`, where each
-   side is `1.0` if `outcome == "pass"` and `0.0` otherwise.
-2. **Cluster on `base_task_id`.** Average the per-fixture differences
+1. **If you ran more than one round per fixture, collapse rounds to one
+   number per fixture first.** For each `(model, fixture_id)`, compute
+   the pass rate across all rounds you ran for it -- 2 of 3 rounds
+   passing is `0.667`, not `1.0` or `0.0` -- *before* pairing. Aggregate
+   by `(model, fixture_id)`, not by `(model, fixture_id, round)`: pairing
+   on individual rounds treats every round as its own cluster-eligible
+   observation, which silently over-weights any fixture you happened to
+   run more rounds on if your round count isn't perfectly uniform, and it
+   makes `k` in step 4 ambiguous -- base tasks, or base-task-rounds?
+   Aggregating to one pass-rate number per fixture first keeps `k`
+   unambiguously equal to the number of distinct base tasks no matter how
+   many rounds you ran, and keeps every base task's contribution to the
+   eventual cluster mean equally weighted. (This drop's own worked
+   example ran one round per arm, so this step is a no-op for it --
+   `on_pass`/`off_pass` below are already single 0/1 values -- but define
+   it before you run more than one round.)
+2. **Pair, don't pool.** For each `fixture_id` present in both arms,
+   compute the per-fixture difference: `on_pass - off_pass`, using the
+   (possibly rounds-collapsed, per step 1) pass rate on each side.
+3. **Cluster on `base_task_id`.** Average the per-fixture differences
    within each base task (its `format_variant` triplet) into one cluster
    mean. A base task with 3 format variants collapses to 1 number.
-3. **Take the mean and standard error of the cluster means**, not of the
+4. **Take the mean and standard error of the cluster means**, not of the
    raw rows. If you have `k` clusters with per-cluster mean difference
    `d_i`:
    - `mean = average(d_i)` across all `k` clusters
    - `se = stdev(d_i) / sqrt(k)` (sample standard deviation of the cluster
      means, divided by the square root of the cluster count)
-4. **Build the interval with Student's t, not a normal approximation.**
+5. **Build the interval with Student's t, not a normal approximation.**
    With `k` clusters, degrees of freedom `df = k - 1`. The 95% interval is
    `mean +/- t(0.975, df) * se`. Use `t`, not `z`, because you're doing
    inference on a small number of cluster means (tens, not thousands), and
    `t` is wider at small `df` to account for that.
-5. **Report `k` (the cluster count) alongside every number.** A delta and
+6. **Report `k` (the cluster count) alongside every number.** A delta and
    an interval without the cluster count behind them cannot be checked or
    trusted.
 
@@ -123,19 +139,39 @@ before budgeting for more of them.
 To answer "how many fixtures x rounds at what difficulty do I need to
 resolve X points" for your own panel and your own task set:
 
-1. Run a pilot (even a small one, `k` in the low single digits) to get a
-   rough clustered `se` for your outcome metric on your task set.
+1. Run a pilot (even a small one, `k_pilot` in the low single digits) to
+   get a clustered `se_pilot` for your outcome metric on your task set,
+   per steps 1-4 of the recipe above.
 2. Check where your pilot's outcomes sit. If most cells are near 0% or
-   100%, that `se` is likely near a floor for that task set -- harder
-   tasks, not more of the same ones, will move it more than adding
-   clusters will.
-3. Plug your pilot `se` and a candidate `k` into
-   `(t(0.975, k-1) + t(0.80, k-1)) x se` and see whether the result is
-   smaller than the effect size you actually care about. If not, increase
-   `k` (more base tasks) and/or increase rounds per base task (tightens
-   each cluster's own mean, which lowers the `se` that feeds this whole
-   calculation) and recompute.
-4. Re-run the pilot math after your first real battery -- `se` is an
+   100%, your pilot's cluster-to-cluster variance is likely near a floor
+   for that task set -- harder tasks, not more of the same ones, will
+   move it more than adding clusters will.
+3. **Recover the underlying cluster standard deviation before you vary
+   `k`.** `se_pilot` already has your pilot's `k_pilot` baked into it
+   (`se = sd / sqrt(k)`), so plugging `se_pilot` straight into a formula
+   for a *different* candidate `k` only moves the t-quantile -- it can't
+   show you the benefit of running more base tasks, because the `se`
+   itself never changes. Undo the division first:
+   `s = se_pilot * sqrt(k_pilot)`. `s` is your estimate of the
+   fixture-to-fixture (cluster-to-cluster) standard deviation itself,
+   independent of how many clusters you happened to pilot with.
+4. For each candidate `k` you're considering, recompute the standard
+   error at that `k`: `se_candidate = s / sqrt(k)`. Plug that -- not
+   `se_pilot` -- into `(t(0.975, k-1) + t(0.80, k-1)) x se_candidate` and
+   see whether the result is smaller than the effect size you actually
+   care about. Increasing `k` now visibly shrinks both the `se_candidate`
+   term and the t-quantile, which is the whole point of running more base
+   tasks. If it's still not small enough, also consider more rounds per
+   base task (tightens each fixture's own pass-rate estimate before
+   pairing, per recipe step 1, which can shrink `s` itself) and recompute.
+5. **Caveat: `s` is only as representative as your pilot.** It's an
+   estimate from `k_pilot` clusters on your pilot's specific task mix and
+   difficulty. If the base tasks you add at a larger `k` are harder,
+   easier, or otherwise different in kind from your pilot's, the true
+   cluster-to-cluster variance at that new `k` will differ from `s`, and
+   this sizing will be optimistic or pessimistic accordingly -- it is a
+   planning estimate, not a guarantee.
+6. Re-run the pilot math after your first real battery -- `s` is an
    estimate, and a bad pilot estimate (too few clusters, or an
    unrepresentative task mix) will mislead the sizing above just as
    easily as it misleads the eventual result.
