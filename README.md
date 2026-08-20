@@ -18,10 +18,13 @@ fixtures/
   refactor/    6 fixtures (2 base tasks x 3 format variants)
   README.md    the methodology -- read this first
 docs/
-  running-the-battery.md   how to run the fixtures against any model/agent
+  running-the-battery.md          how to run the fixtures against any model/agent
+  drop2-run-conditions.md         how to configure a thinking on/off A-B, incl. the adaptive-default trap
+  drop2-method-power-math.md      paired/clustered analysis recipe + power math, worked with real numbers
 results/
-  reference-results.csv    raw per-fixture per-model outcome rows
-  README.md                what those rows are (and aren't)
+  reference-results.csv               raw per-fixture per-model outcome rows
+  drop2-thinking-onoff-reference.csv  worked-example rows for the thinking on/off method kit
+  README.md                           what those rows are (and aren't)
 governance/
   denylist.txt                the content deny-list
   check_denylist.py           CI: scans every file against it
@@ -63,6 +66,18 @@ by intent, and we're publishing the mechanism, not just the promise:
    above. If you ever find something here that looks like it violates
    this, please open an issue -- that's a bug in our process, not a
    one-off mistake to quietly fix.
+5. **The product boundary applies to drops from published pieces, too.**
+   A published analysis may run on a larger, production-shaped task
+   corpus than what's here -- that corpus, its graders, and its harder
+   fixture variants stay on the product side of the line in point 3
+   above and are never published, regardless of how much of a finding
+   they carry. What a drop publishes instead is a method kit: the sample
+   fixtures (still just this repo's 30), a worked-example subset of
+   reference rows over those fixtures, the analysis math, and guidance
+   for building your own task set with the same construction. A drop's
+   docs will say plainly when a published number can't be reproduced
+   from the rows in this repo, rather than publishing a subset that
+   quietly disagrees with the piece it accompanies.
 
 ## License
 
