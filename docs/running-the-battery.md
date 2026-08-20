@@ -52,8 +52,11 @@ you do.
 
 Our own CLI, `bpsai-pair`, ships a runner that implements the protocol
 above end to end, if you'd rather not write your own harness. It bundles
-its own copy of this same fixture set internally (kept in sync with
-`fixtures/` here), so the invocation doesn't take a path argument:
+a copy of this fixture set internally, so the invocation doesn't take a
+path argument. This repo's `fixtures/` is the source of truth for the
+fixture contents -- if you ever find the bundled copy differs from what's
+here, that's a bug in the bundling, not an authoritative variant; open an
+issue against this repo:
 
 ```bash
 pip install bpsai-pair

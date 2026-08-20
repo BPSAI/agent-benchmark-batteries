@@ -15,11 +15,12 @@ Your rows are not independent draws. Every fixture belongs to a
 `base_task_id` (a base coding task, rendered in three format variants --
 see [`fixtures/README.md`](../fixtures/README.md)), and a model's
 performance on the three variants of the same base task is correlated --
-they share the same underlying task and the same solution. Treating 90
-rows as 90 independent Bernoulli trials overstates your precision,
-because you don't actually have 90 independent pieces of evidence about
-whether thinking changes the pass rate; you have as many independent
-pieces of evidence as you have distinct base tasks.
+they share the same underlying task and the same solution. Treating a
+model's 30 rows in `drop2-thinking-onoff-reference.csv` as 30 independent
+Bernoulli trials overstates your precision, because you don't actually
+have 30 independent pieces of evidence about whether thinking changes the
+pass rate; you have as many independent pieces of evidence as you have
+distinct base tasks -- 10, in this file.
 
 ## The recipe
 
@@ -67,10 +68,12 @@ Student-t on cluster means -- used throughout this drop's own analysis.
 ### Worked numbers, this drop's own run
 
 Applying the recipe above to `drop2-thinking-onoff-reference.csv`, for
-the two models where field-absent means off (`opus`, `haiku` -- see
-`docs/drop2-run-conditions.md`): `k = 10` clusters, `df = 9`. Both models
-go 30/30 in both arms on all 10 base tasks, every one of the 10 cluster
-means is exactly `0.0`, so:
+**four of the five metered models in this panel** (`opus`, `haiku`,
+`opus-5`, `sonnet` -- see `docs/drop2-run-conditions.md` for what
+field-present/field-absent means for each): `k = 10` clusters, `df = 9`.
+Every one of these four models goes 30/30 in both arms on all 10 base
+tasks, so every one of the 10 cluster means is exactly `0.0` for each of
+them:
 
 - `mean = 0.0`
 - `stdev(d_i) = 0.0` across all 10 clusters -> `se = 0.0`
@@ -79,7 +82,20 @@ means is exactly `0.0`, so:
   regardless of the t-quantile, because there is no cluster-to-cluster
   variance in this sample to build an interval from.
 
-Run the recipe yourself against that file to check this.
+**The fifth metered model, `fable`, does not saturate, and its numbers
+are not zero.** Applying the identical recipe: `k = 10` clusters,
+`df = 9`, `mean = -0.0333` (-3.33 percentage points), `stdev(d_i) =
+0.1892` across the 10 clusters, `se = 0.0598`. This time `se` is not
+zero, so the interval is computable: `t(0.975, 9) = 2.262157`, `ci95 =
+mean +/- t*se = [-0.1687, +0.1020]` -> **[-16.9, +10.2] points**,
+`t(9) = mean / se = -0.557`, `p = 0.591`. Not a significant result, but a
+*real* one, in the sense that matters here: this is what the recipe
+produces when the pilot isn't degenerate. Run the recipe yourself against
+this model's rows to check both this and the four-model result above.
+
+Two structurally different outcomes came out of the identical procedure
+applied to six columns of the same 360-row file. That is the entire point
+of the next section.
 
 ## The power question: how many fixtures do you need?
 
@@ -107,30 +123,49 @@ noisy round to round.
 ### This drop's own numbers, as a worked example
 
 This is where this drop's own sample becomes the lesson rather than a
-sizing example: with `se = 0.0` (previous section), you cannot plug this
-pilot into the power-sizing procedure below at all. Try it and see why --
-`s = se_pilot * sqrt(k_pilot) = 0.0 * sqrt(10) = 0.0`, so every candidate
-`k` you try in step 4 below still gives `se_candidate = 0.0 / sqrt(k) =
-0.0`, and `(t(0.975, k-1) + t(0.80, k-1)) x 0.0 = 0` no matter how large
-or small `k` is. Read literally, that says this design could detect an
-effect of size zero at any sample size -- which is nonsense, and the
-nonsense is the diagnostic. A zero-variance pilot has not measured "no
-effect is detectable here even at scale"; it has measured "these 10 base
-tasks, at this difficulty, produced no cluster where the outcome ever
-moved between arms for these two models." That is a property of the task
-set (both models passed all 30 fixtures in both arms, on every base
-task), not a property of the effect you're trying to size for.
+sizing example -- and the lesson is per-model, not per-file, because this
+one file contains both kinds of pilot.
 
-**The fix is harder fixtures, not more of the same ones.** A pilot at or
+**For `opus`, `haiku`, `opus-5`, and `sonnet`**, `se = 0.0` (previous
+section), and you cannot plug that pilot into the power-sizing procedure
+below at all. Try it and see why -- `s = se_pilot * sqrt(k_pilot) = 0.0 *
+sqrt(10) = 0.0`, so every candidate `k` you try in step 4 below still
+gives `se_candidate = 0.0 / sqrt(k) = 0.0`, and `(t(0.975, k-1) +
+t(0.80, k-1)) x 0.0 = 0` no matter how large or small `k` is. Read
+literally, that says this design could detect an effect of size zero at
+any sample size -- which is nonsense, and the nonsense is the diagnostic.
+A zero-variance pilot has not measured "no effect is detectable here even
+at scale"; it has measured "these 10 base tasks, at this difficulty,
+produced no cluster where the outcome ever moved between arms for this
+model." That is a property of the task set for that model (each of these
+four passed all 30 fixtures in both arms, on every base task), not a
+property of the effect you're trying to size for.
+
+**For `fable`, the same file gives you a real `se` to size from**:
+`s = se_pilot * sqrt(k_pilot) = 0.0598 * sqrt(10) = 0.1892` -- the
+cluster standard deviation recovered in the previous section, which is
+exactly the number the recipe computed directly there. Plugging that
+into step 4 below for a candidate `k` produces a real, nonzero sizing
+answer, unlike the other four models' pilots. The difference between the
+two outcomes isn't the fixtures or the recipe -- it's whether the model's
+outcomes moved at all across arms and clusters, which is not something
+you can tell in advance of running the pilot.
+
+**The honest lesson from this file: compute your own cluster variance per
+model before concluding anything about a sample's power.** A pilot at or
 near the ceiling (models passing nearly everything, in both arms) cannot
 produce the variance the sizing formula needs, and no amount of
-additional same-difficulty base tasks fixes that -- `s` stays at or near
-zero. Before you trust any `k` this procedure recommends, check that your
-pilot's outcomes are not clustered at 0% or 100% pass rate across the
-board. If they are, add base tasks difficult enough that at least some of
-them produce a mixed pass/fail outcome across your panel, re-run the
-pilot, and only then use the recipe in the next section to size a full
-run.
+additional same-difficulty base tasks fixes that for a saturated model --
+`s` stays at or near zero for it specifically, even in a file where
+another model's `s` is very much not zero. Before you trust any `k` this
+procedure recommends for a given model, check that model's own pilot
+outcomes aren't clustered at 0% or 100% pass rate. If they are for that
+model, either add base tasks difficult enough to produce a mixed
+pass/fail outcome for it, or -- if refusals or another mechanism are
+already producing real variance for it, the way they do for `fable` here
+-- size directly from that model's own recovered `s`, per model, not from
+a single file-wide assumption about whether your task set has "enough"
+variance.
 
 ### Sizing your own run
 

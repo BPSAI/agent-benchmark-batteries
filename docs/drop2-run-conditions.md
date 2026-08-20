@@ -12,16 +12,37 @@ between the two arms.
 
 - **Field-absent arm**: omit the extended-thinking/reasoning field from
   the request entirely.
-- **Field-present arm**: include it, with an explicit budget where the
-  vendor requires one (`{"type": "enabled", "budget_tokens": 4096}` for
-  legacy-shape thinking models) or an adaptive/auto mode where the vendor
-  only offers that shape (`{"type": "adaptive"}`).
+- **Field-present arm**: include it, with the model-specific shape below
+  -- these are not interchangeable across models, and sending the wrong
+  one (in particular, sending `budget_tokens` to a model that has removed
+  it) gets you a 400, not a quietly-ignored field:
+
+| model | field-present request shape |
+|---|---|
+| `opus` (Claude Opus 4.8) | `{"type": "enabled"}` -- no `budget_tokens`; sending one is rejected with a 400 on this model |
+| `haiku` (Claude Haiku 4.5) | `{"type": "enabled", "budget_tokens": 4096}` -- `budget_tokens` is required here; this is the one model in the panel that still takes it |
+| `opus-5` (Claude Opus 5) | `{"type": "adaptive"}`, optionally with an `effort` level -- no `budget_tokens`; sending one is rejected with a 400 |
+| `sonnet` (Claude Sonnet 5) | `{"type": "adaptive"}` -- no `budget_tokens`; sending one is rejected with a 400 |
+| `fable` (Claude Fable 5) | `{"type": "enabled"}` -- no `budget_tokens`; sending one is rejected with a 400 (this model is always-on regardless -- see the table below -- so this request shape is sent for symmetry with the other arms' construction, not because it changes anything) |
+| `ollama-devstral` (local comparator) | no thinking field sent in either arm -- see "About the local comparator" below |
 
 Everything else -- fixture, prompt, temperature, model, day -- stays fixed
-between the two requests for a given `(fixture, model)` pair. Only the
-thinking field changes. Run both arms back-to-back (the worked example's
-two arms started about twenty-four minutes apart) so a same-day change on
-the vendor's side can't land between them.
+between the two requests for a given `(fixture, model)` pair, **with one
+observed exception**: `haiku`'s `tokens_in` is exactly 30 tokens higher on
+all 30 field-present rows than the matching field-absent row for the same
+fixture, while every other model's `tokens_in` is identical between its
+two arms on all 30 of its fixtures. This file doesn't ship a byte-level
+request log, so the cause isn't determinable from the shipped data alone
+-- stated here as an observed fact, not explained by a mechanism this
+repo can verify. If you rely on "only the thinking field changes" as an
+invariant in your own run, check `tokens_in` per model the same way and
+don't assume it holds for every model just because it holds for most.
+
+Run both arms back-to-back so a same-day change on the vendor's side
+can't land between them. (This file doesn't ship request timestamps, so
+the gap between its own two arms isn't independently checkable from the
+CSV -- "back-to-back" is the target to hit in your own run, not a number
+this file lets you verify.)
 
 **Do not call either arm "on" or "off."** That's the whole subject of the
 next section: what omitting the field actually does depends on the
@@ -41,8 +62,16 @@ handled differently again per model:
 | `haiku` (Claude Haiku 4.5) | off -- no reasoning happens | not needed; field-absent already produces off |
 | `opus-5` (Claude Opus 5) | adaptive -- the model decides per call | `{"type": "disabled"}` accepted at effort `high` or below; rejected with a 400 at effort `xhigh`/`max` |
 | `sonnet` (Claude Sonnet 5) | adaptive -- the model decides per call | `{"type": "disabled"}` accepted outright |
-| `fable` (Claude Fable 5) | always-on -- there is no off state | `{"type": "disabled"}` rejected with a 400 |
-| `ollama-devstral` (local comparator) | not applicable -- this model family has no thinking/reasoning field | not applicable |
+| `fable` (Claude Fable 5) | always-on (request-shape fact -- see below for what the rows show) | `{"type": "disabled"}` rejected with a 400 |
+| `ollama-devstral` (local comparator) | no thinking field was sent in either arm -- see "About the local comparator" below | not applicable |
+
+**"Always-on" and "off" in this table are request-shape facts, not
+per-row behavior claims.** They describe what the vendor's documentation
+says about whether reasoning *can be switched off by request* --
+`fable`'s "always-on" means there is no request that turns it off, full
+stop. It does not mean `fable` reasons the same amount, or reasons at
+all, on every row -- see the next section for what its rows actually do,
+which is neither "always-on" nor "off" in any per-row sense.
 
 **On the two models where field-absent already means off, no further
 action is needed to run a true off arm.** On the two adaptive models,
@@ -54,46 +83,104 @@ request to any model** -- both of its arms are "field present" (an
 explicit `enabled`/`adaptive` request) and "field absent" (nothing sent),
 never an explicit disable. So for `opus-5` and `sonnet` in this file, the
 field-absent arm is not an off arm; it is the adaptive default, observed
-twice. On `fable`, neither arm can be off -- the field-present request
-and the field-absent request both land on the vendor's single always-on
-state, and the explicit-disable shape that would test for an off state
-is documented to fail with a 400 rather than being honored.
+twice. On `fable`, neither arm can be off by request -- the field-present
+request and the field-absent request both land on the vendor's single
+always-on state, and the explicit-disable shape that would test for an
+off state is documented to fail with a 400 rather than being honored.
+
+## What `fable`'s rows actually show: adaptive depth, not constant behavior
+
+"Always-on" describes the request shape, and the request shape is the
+whole story for the four models above -- but `fable` is different, and
+the difference only shows up in the rows, not in the vendor's
+documentation. Recomputed from `drop2-thinking-onoff-reference.csv`
+alone:
+
+- **`tokens_reasoning` is zero on 16 of `fable`'s 30 field-present rows
+  and 14 of its 30 field-absent rows.** An always-on model that reasoned
+  the same amount on every call would show mean-only variation, not a
+  majority of rows at exactly zero token by token. This model reasons on
+  some calls and not others, regardless of what was requested.
+- **The two arms' means genuinely separate**: 86.5 reasoning tokens/row
+  field-present vs. 40.7 field-absent, over the full 30-row samples --
+  unlike `opus-5`/`sonnet` above, whose two arms overlap. Presence of the
+  field correlates with more reasoning here, even though the vendor's own
+  documentation says the field can't switch reasoning off.
+- **All 33 refused rows in this entire 360-row file belong to `fable`**
+  (17 in the field-present arm, 16 in the field-absent arm) -- no other
+  model in the panel refused a single fixture. `fable`'s pass rate is
+  correspondingly not saturated (13/30 field-present, 14/30 field-absent,
+  vs. 30/30 for every other metered model in both arms -- see
+  `docs/drop2-method-power-math.md` for the statistics this produces).
+- **The refusals track `format_variant`, not chance**: `short` fixtures
+  pass 8/10 in both arms; `embedded-neutral` passes 3/10 field-present vs.
+  5/10 field-absent; `embedded-production` passes 2/10 field-present vs.
+  1/10 field-absent. Recompute this yourself by grouping the CSV's
+  `fable` rows on the fixture id's format suffix.
+
+None of this contradicts the request-shape fact above -- there genuinely
+is no request you can send this model that turns reasoning off. But
+"always-on" is not the same claim as "constant," and this file's own
+rows are the only place that distinction is visible; the vendor's
+documentation alone would tell you nothing about the reasoning-token
+zeros, the arm separation, or the refusal/format pattern.
 
 **The tell is in the reasoning-token counts, not in what you sent.**
 Compare mean reasoning tokens per row across your two arms for each
 model. Every number below is `tokens_reasoning` averaged over the 30
 rows/arm for that model in `drop2-thinking-onoff-reference.csv` --
 recompute it yourself and it will match, because that CSV is the only
-source for this table. The two off-on-omission models show the pattern
-you'd expect -- omitting the field drove reasoning tokens to zero:
+source for this table, covering all six models in the panel:
 
 | model | reasoning tokens/row, field present | reasoning tokens/row, field absent |
 |---|---|---|
-| `opus` | 153.3 | 0.0 |
-| `haiku` | 1,527.0 | 0.0 |
+| `opus` (off on omission) | 153.3 | 0.0 |
+| `haiku` (off on omission) | 1,527.0 | 0.0 |
+| `opus-5` (adaptive default) | 435.5 | 461.5 |
+| `sonnet` (adaptive default) | 189.2 | 207.9 |
+| `fable` (always-on by request, adaptive per row -- see above) | 86.5 | 40.7 |
+| `ollama-devstral` (no thinking field sent) | 0.0 | 0.0 |
 
-The two adaptive models show reasoning tokens in the same range whether
-the field was present or absent, because field-absent was never off for
-them -- it was "let the model decide," and the model decided about the
-same thing both times:
+`opus` and `haiku` show the pattern you'd expect from an off-on-omission
+model -- omitting the field drove reasoning tokens to zero. `opus-5` and
+`sonnet` show reasoning tokens in the same range whether the field was
+present or absent, because field-absent was never off for them -- it was
+"let the model decide," and the model decided about the same thing both
+times: that's the adaptive-default trap. `fable` is the third pattern --
+its means separate for real (86.5 vs. 40.7, not overlapping ranges), even
+though the vendor's documentation says the field cannot switch its
+reasoning off; the per-row zero/nonzero split above is what makes that
+consistent.
 
-| model | reasoning tokens/row, field present | reasoning tokens/row, field absent |
-|---|---|---|
-| `opus-5` | 435.5 | 461.5 |
-| `sonnet` | 189.2 | 207.9 |
-
-Those two rows are the trap: a naive reading of "I omitted the field" as
-"thinking was off" would report a contrast that never happened. The fix
-is mechanical, not a vendor-documentation lookup: pull `tokens_reasoning`
-straight from your own response payloads (the column already exists in
+A naive reading of "I omitted the field" as "thinking was off" would
+report a contrast that never happened on `opus-5`/`sonnet`, and a naive
+reading of "the vendor says always-on" as "the field doesn't matter"
+would miss a real effect on `fable`. The fix is mechanical, not a
+vendor-documentation lookup: pull `tokens_reasoning` straight from your
+own response payloads (the column already exists in
 `drop2-thinking-onoff-reference.csv` if you want to see the raw numbers
-behind the table above) and confirm the two arms actually differ in the
-metric you're claiming to manipulate, on every model in your panel,
-before you compute anything downstream of it. If a model has no
-documented way to reach a true off state at all -- an explicit disable
-request that the vendor's own documentation says will be rejected -- that
-is itself a result worth reporting (no off state exists for that model),
-not a gap to paper over with an assumed contrast.
+behind the table above) and confirm what the two arms actually did, on
+every model in your panel, before you compute anything downstream of it.
+If a model has no documented way to reach a true off state at all -- an
+explicit disable request that the vendor's own documentation says will
+be rejected -- that is itself a result worth reporting (no off *state*
+exists for that model), separately from whatever its per-row reasoning
+behavior turns out to be.
+
+## About the local comparator
+
+`ollama-devstral` received no thinking field in either arm -- its two
+"arms" are otherwise byte-for-byte identical requests, confirmed from
+this file: `tokens_in` is identical between its field-present and
+field-absent rows on all 30 of its fixtures (nothing else in this repo
+sources a claim about this model's actual reasoning capability; the
+request behavior above is all that's determinable from the shipped
+data). It's included under two arms anyway because it's a free
+comparator that costs nothing to run twice: since nothing varies in its
+requests, any outcome difference between its two "arms," row for row,
+would indicate non-determinism in the model or the harness rather than a
+thinking effect -- a sanity check you get for free by including it,
+without asserting anything about what the model does or doesn't support.
 
 ## Verification step, restated
 

@@ -12,7 +12,7 @@ Run them against your own agents.
 
 ```
 fixtures/
-  bugfix/      6 fixtures (2 base tasks x 3 format variants)
+  bugfix/      12 fixtures (4 base tasks x 3 format variants)
   chore/       3 fixtures (1 base task x 3 format variants)
   feature/     9 fixtures (3 base tasks x 3 format variants)
   refactor/    6 fixtures (2 base tasks x 3 format variants)
@@ -58,8 +58,10 @@ by intent, and we're publishing the mechanism, not just the promise:
 3. **On the private side**, this repo is updated from our internal
    monorepo through exactly one script, which copies only from an
    explicit per-fixture allowlist and hard-refuses any path from our
-   confidential reasoning-fixture family by construction (tested, not
-   just documented).
+   confidential reasoning-fixture family by construction (the receiving
+   side of that promise -- the two governance checks in point 1 and
+   point 2 above -- is the part you can verify yourself, from this repo
+   alone).
 4. **This repo will never contain**: real hypotheses, real fleet or
    customer data, internal telemetry or trace data, internal decision
    records, credentials, or the confidential fixture family referenced

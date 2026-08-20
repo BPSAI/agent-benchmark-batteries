@@ -2,15 +2,16 @@
 
 ## Why this set exists
 
-The refusal-rate battery run against the v2 fixture set (`fixtures/`) found
-that refusal correlated with fixture **format**, not difficulty -- but v2
-confounds the two: every `hard`/`hard-plus` fixture is a long embedded
-module annotated with `BUG:`/`INVARIANT:` docstring blocks, framed as
-already being "in production," while every `easy`/`medium` fixture is a
-short, direct instruction with no embedded module and no production
-framing. A model that refuses more on hard-tier fixtures could be reacting
-to the harder *task*, the longer *format*, the production *framing*, or
-some mix of the three -- v2 cannot tell these apart.
+A refusal-rate battery run against an earlier fixture set (v2, not shipped
+in this repo) found that refusal correlated with fixture **format**, not
+difficulty -- but v2 confounded the two: every `hard`/`hard-plus` fixture
+was a long embedded module annotated with `BUG:`/`INVARIANT:` docstring
+blocks, framed as already being "in production," while every
+`easy`/`medium` fixture was a short, direct instruction with no embedded
+module and no production framing. A model that refuses more on hard-tier
+fixtures could be reacting to the harder *task*, the longer *format*, the
+production *framing*, or some mix of the three -- v2 could not tell these
+apart.
 
 Fixture Set v3 decorrelates the two axes by construction: the same 10 base
 coding tasks are each rendered in 3 formats, so difficulty and format vary
@@ -21,8 +22,11 @@ holding difficulty (and the underlying task) fixed.
 
 - **Axis A -- structure**: `short` (a short, direct instruction, no
   embedded module) vs `embedded` (a long embedded module in a fenced code
-  block, annotated with `BUG:`/`INVARIANT:` docstring blocks, matching v2's
-  hard-tier style).
+  block, matching v2's hard-tier style). 6 of the 10 base tasks' embedded
+  modules also carry `BUG:`/`INVARIANT:` docstring annotations (the other
+  4 do not); the axis itself is the presence of the embedded module, not
+  the annotation, which varies by base task rather than by format
+  variant.
 - **Axis B -- framing**: `neutral` (the module "implements X") vs
   `production` (the module "is already in production," with an explicit
   stakes/urgency sentence -- paying customers, revenue, compliance, an
@@ -56,14 +60,18 @@ acceptance checks**. Concretely, for every `base_task_id`:
 - Only `input_prompt` (and the `format_variant`/`format_axes` metadata
   that labels it) differs.
 
-This was verified **by construction**, not just by inspection: every base
-task's module code, task instruction, and `expected_shape` was written
-ONCE and rendered into all 3 formats by a generator, so the 3 fixtures for
-a base task cannot independently drift. `tests/benchmarks/matrix/
-test_fixtures_v3_bundle.py` re-verifies the invariant from the shipped
-JSON on every test run (`test_fixture_set_v3_triplet_shares_expected_shape`,
-`test_fixture_set_v3_triplet_shares_system_prompt_and_difficulty`), so it
-stays enforced if a fixture is ever hand-edited later.
+This was written **by construction**, not just checked by inspection:
+every base task's module code, task instruction, and `expected_shape` was
+authored ONCE and rendered into all 3 formats by a generator at
+publication time, so the 3 fixtures for a base task were not independently
+hand-written. **This repo does not run an automated check that
+re-verifies the invariant on every change** -- there is no CI job for it
+in `.github/workflows/ci.yml` (only the two governance checks in the root
+README run there). You can check it yourself, for any base task, in one
+pass over the 3 JSON files: diff `expected_shape`, `system_prompt`,
+`task_type`, and `difficulty` across `<base_task_id>--short.json`,
+`--embed-neutral.json`, and `--embed-prod.json` and confirm they match
+byte-for-byte except where this section says they should differ.
 
 ## The 10 base tasks
 
@@ -88,7 +96,7 @@ fixtures.
 
 Fixture ids follow `<base_task_id>--<suffix>`, `suffix` in
 `short` / `embed-neutral` / `embed-prod`, filed under
-`fixtures_v3/<task_type>/`.
+`fixtures/<task_type>/`.
 
 ## Metadata per fixture
 
@@ -112,61 +120,52 @@ evidence.
 
 ## Analysis contract
 
-Every dispatched row -- `matrix.json`'s `rows[]` (not `matrix.csv`, whose
-9-column contract is pinned and never gains new columns) -- carries its
-own `base_task_id` and `format_variant` columns, sourced directly from
-the dispatched fixture's `metadata` at dispatch time (see
-`row.MatrixRow.base_task_id` / `.format_variant`, populated by
-`row._v3_attribution`). **Read these columns directly; do not derive them
-by parsing `fixture_id`.** They are empty strings (`""`) for every
-non-v3-family row.
-
-Fallback note (only relevant for a `matrix.json` written before this
-schema existed, which has no `base_task_id`/`format_variant` keys): the
-same two values are also recoverable by parsing `fixture_id`, but ONLY if
-you use the id-suffix-to-format_variant mapping below -- the id suffix
-does **not** literally equal the `format_variant` value (`embed-neutral`
-!= `embedded-neutral`, `embed-prod` != `embedded-production`), so a naive
-`fixture_id.split("-")[-1]` mislabels every embedded-format cell. Fixture
-ids are `<base_task_id>--<suffix>`; split on `--` and map the suffix
-explicitly: `short` -> `short`, `embed-neutral` -> `embedded-neutral`,
-`embed-prod` -> `embedded-production`.
+Whatever result format your own harness writes, attach `base_task_id` and
+`format_variant` to every row directly from the dispatched fixture's own
+`metadata` object (see "Metadata per fixture" above) -- **read these
+values from the fixture you dispatched; do not try to recover them by
+parsing `fixture_id`.** The id suffix does **not** literally equal the
+`format_variant` value (`embed-neutral` != `embedded-neutral`,
+`embed-prod` != `embedded-production`), so a naive
+`fixture_id.split("-")[-1]` mislabels every embedded-format cell. If you
+ever do need to recover them from the id alone (e.g. a result file that
+didn't carry the fixture's metadata through), split on `--` and map the
+suffix explicitly: `short` -> `short`, `embed-neutral` ->
+`embedded-neutral`, `embed-prod` -> `embedded-production`.
 
 ### Repetitions are required -- N=1 gives no usable fraction
 
-The documented `matrix-run` invocations above dispatch each
-`(fixture, model)` pair exactly **once**. A "rate" computed from a single
-dispatch is either 0% or 100% for that cell and carries no statistical
-weight -- it is not a refusal-rate or a pass-rate, just one observation.
-**Do not report a per-cell fraction from a single `matrix-run` call.**
+Whatever harness you use (see
+[`docs/running-the-battery.md`](../docs/running-the-battery.md) for the
+protocol and one worked example), dispatching each `(fixture, model)`
+pair exactly **once** gives a "rate" that is either 0% or 100% for that
+cell and carries no statistical weight -- it is not a refusal-rate or a
+pass-rate, just one observation. **Do not report a per-cell fraction from
+a single pass over the fixtures.**
 
-Run the panel **N >= 3 times** per model before computing any rate,
-mirroring the repeated-round pattern the project's own multi-round panel
-scripts already use for exactly this reason (e.g. a fixed model panel
-looped across several `matrix-run` invocations, each writing its own
-timestamped `results/<stamp>/` directory, then aggregated together
-afterward -- see `results_dir`/`write_matrix` in `io.py` for why each
-round lands in its own directory instead of overwriting the last one).
-Concatenate the `rows[]` from all N `matrix.json` runs before grouping by
-cell.
+Run the panel **N >= 3 times** per model before computing any rate. Keep
+each round's output separate (don't overwrite the previous round's
+results) and concatenate all N rounds' rows before grouping by cell --
+whatever your harness's on-disk layout, one round per file/directory
+makes this concatenation mechanical and keeps a bad round auditable on
+its own.
 
 For each `(base_task_id, format_variant, model_id)` cell, across the
 concatenated N-round rows, compute:
 
 - **n** -- the row count in the cell. Report this alongside every rate;
   a rate without its `n` is not reproducible or falsifiable by a reader.
-- **pass-rate** -- fraction of the cell's rows with `outcome == "pass"`
-  (or the scorer's pass/partial/fail split, per `scorer.ScoreReport`).
-- **refusal-rate** -- fraction of the cell's rows with
-  `outcome == "refused"` (`refusal.classify_outcome` already reclassifies
-  empty/near-zero-token completions as `refused` at dispatch time, so this
-  is a plain outcome count over the concatenated rows, no extra
-  post-processing needed).
+- **pass-rate** -- fraction of the cell's rows scored `pass` per the
+  protocol in `docs/running-the-battery.md` (adjust for your own
+  scorer's pass/partial/fail split if it differs from that protocol).
+- **refusal-rate** -- fraction of the cell's rows classified `refused`
+  (declined, or an empty/near-zero-token completion, per the same
+  protocol).
 
-A single `matrix-run --family fixture-set-v3` invocation is useful for
-smoke-testing the fixtures and the wiring (does dispatch complete, do
-checks fire) but its output is **exploratory only** -- never cite a rate
-computed from it as evidence of a format or framing effect.
+A single pass over the fixtures is useful for smoke-testing the fixtures
+and your harness's wiring (does dispatch complete, do checks fire) but
+its output is **exploratory only** -- never cite a rate computed from it
+as evidence of a format or framing effect.
 
 ### Valid contrasts -- only two isolate a single axis
 
