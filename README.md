@@ -19,11 +19,11 @@ fixtures/
   README.md    the methodology -- read this first
 docs/
   running-the-battery.md          how to run the fixtures against any model/agent
-  drop2-run-conditions.md         how to configure a thinking on/off A-B, incl. the adaptive-default trap
+  drop2-run-conditions.md         how to configure a thinking field-present/field-absent A-B, incl. the adaptive-default trap
   drop2-method-power-math.md      paired/clustered analysis recipe + power math, worked with real numbers
 results/
   reference-results.csv               raw per-fixture per-model outcome rows
-  drop2-thinking-onoff-reference.csv  worked-example rows for the thinking on/off method kit
+  drop2-thinking-onoff-reference.csv  reference rows for the thinking field-present/field-absent method kit
   README.md                           what those rows are (and aren't)
 governance/
   denylist.txt                the content deny-list
@@ -66,18 +66,14 @@ by intent, and we're publishing the mechanism, not just the promise:
    above. If you ever find something here that looks like it violates
    this, please open an issue -- that's a bug in our process, not a
    one-off mistake to quietly fix.
-5. **The product boundary applies to drops from published pieces, too.**
-   A published analysis may run on a larger, production-shaped task
-   corpus than what's here -- that corpus, its graders, and its harder
-   fixture variants stay on the product side of the line in point 3
-   above and are never published, regardless of how much of a finding
-   they carry. What a drop publishes instead is a method kit: the sample
-   fixtures (still just this repo's 30), a worked-example subset of
-   reference rows over those fixtures, the analysis math, and guidance
-   for building your own task set with the same construction. A drop's
-   docs will say plainly when a published number can't be reproduced
-   from the rows in this repo, rather than publishing a subset that
-   quietly disagrees with the piece it accompanies.
+5. **The product boundary applies to drops, too.** A larger,
+   production-shaped task corpus, its graders, and its harder fixture
+   variants stay on the product side of the line in point 3 above and
+   are never published here. What a drop publishes is a method kit: the
+   sample fixtures (still just this repo's 30), reference rows over
+   those fixtures, the analysis math, and guidance for building your own
+   task set with the same construction -- never a private corpus's own
+   figures.
 
 ## License
 

@@ -2,11 +2,12 @@
 
 This is the core of the method kit: the exact recipe used to turn raw
 per-fixture rows into the pass-rate delta and confidence interval you'd
-report for a thinking on/off (or any other) A-B contrast, plus the power
-math to tell you, before you run anything, how many fixtures and rounds
-you need to resolve an effect of a given size. Every number below traces
-to this drop's audited fixtures sheet; none of it is invented for this
-document.
+report for a thinking field-present/field-absent (or any other) A-B
+contrast, plus the power math to tell you, before you run anything, how
+many fixtures and rounds you need to resolve an effect of a given size.
+Every number below traces to
+[`results/drop2-thinking-onoff-reference.csv`](../results/drop2-thinking-onoff-reference.csv);
+none of it is invented for this document.
 
 ## Why row-level statistics are the wrong tool
 
@@ -36,11 +37,12 @@ pieces of evidence as you have distinct base tasks.
    many rounds you ran, and keeps every base task's contribution to the
    eventual cluster mean equally weighted. (This drop's own worked
    example ran one round per arm, so this step is a no-op for it --
-   `on_pass`/`off_pass` below are already single 0/1 values -- but define
-   it before you run more than one round.)
+   `present_pass`/`absent_pass` below are already single 0/1 values --
+   but define it before you run more than one round.)
 2. **Pair, don't pool.** For each `fixture_id` present in both arms,
-   compute the per-fixture difference: `on_pass - off_pass`, using the
-   (possibly rounds-collapsed, per step 1) pass rate on each side.
+   compute the per-fixture difference: `present_pass - absent_pass`,
+   using the (possibly rounds-collapsed, per step 1) pass rate on each
+   side.
 3. **Cluster on `base_task_id`.** Average the per-fixture differences
    within each base task (its `format_variant` triplet) into one cluster
    mean. A base task with 3 format variants collapses to 1 number.
@@ -64,25 +66,20 @@ Student-t on cluster means -- used throughout this drop's own analysis.
 
 ### Worked numbers, this drop's own run
 
-The published essay's headline ran on a 30-base-task corpus (90 fixtures
-per arm per model: 30 base tasks x 3 format variants), of which the 10
-base tasks in this repo's `fixtures/` are a subset. On that 30-cluster
-corpus, two models each lost exactly one fixture between arms:
+Applying the recipe above to `drop2-thinking-onoff-reference.csv`, for
+the two models where field-absent means off (`opus`, `haiku` -- see
+`docs/drop2-run-conditions.md`): `k = 10` clusters, `df = 9`. Both models
+go 30/30 in both arms on all 10 base tasks, every one of the 10 cluster
+means is exactly `0.0`, so:
 
-- `mean = -0.011111` (-1.1111 percentage points)
-- `se = 0.011111`
-- `df = 29`, `t(0.975, 29) = 2.045230`
-- `ci95 = mean +/- t*se = [-0.033836, +0.011614]` -> **[-3.4, +1.2] points**
-- `t(29) = mean / se = -1.000`, `p = 0.326`
+- `mean = 0.0`
+- `stdev(d_i) = 0.0` across all 10 clusters -> `se = 0.0`
+- **No interval is computable.** `t(0.975, 9) * se` and every other
+  quantity below that multiplies by `se` evaluates to exactly `0`,
+  regardless of the t-quantile, because there is no cluster-to-cluster
+  variance in this sample to build an interval from.
 
-That -1.1 point, [-3.4, +1.2] result is **not reproducible from this
-repo's public rows** -- see `results/README.md` for why (20 of the 30
-base tasks that produced it are not public, including both fixtures that
-carried the whole effect). Recomputed on exactly the 10 public base tasks
-in `drop2-thinking-onoff-reference.csv`, using the identical recipe above
-(`k = 10`, `df = 9`), the same two models go 30/30 in both arms: `mean =
-0.0`, zero cluster variance, no interval computable. Run the recipe
-yourself against that file to check both of these numbers.
+Run the recipe yourself against that file to check this.
 
 ## The power question: how many fixtures do you need?
 
@@ -109,30 +106,31 @@ noisy round to round.
 
 ### This drop's own numbers, as a worked example
 
-At `k = 30` clusters (`df = 29`), the observed clustered `se` was `0.011111`
-(1.1111 points) -- itself a function of how close to the ceiling the
-outcomes sat (two near-perfect models have almost no room to show
-variance, so the observed `se` here is close to a floor, not a typical
-value):
+This is where this drop's own sample becomes the lesson rather than a
+sizing example: with `se = 0.0` (previous section), you cannot plug this
+pilot into the power-sizing procedure below at all. Try it and see why --
+`s = se_pilot * sqrt(k_pilot) = 0.0 * sqrt(10) = 0.0`, so every candidate
+`k` you try in step 4 below still gives `se_candidate = 0.0 / sqrt(k) =
+0.0`, and `(t(0.975, k-1) + t(0.80, k-1)) x 0.0 = 0` no matter how large
+or small `k` is. Read literally, that says this design could detect an
+effect of size zero at any sample size -- which is nonsense, and the
+nonsense is the diagnostic. A zero-variance pilot has not measured "no
+effect is detectable here even at scale"; it has measured "these 10 base
+tasks, at this difficulty, produced no cluster where the outcome ever
+moved between arms for these two models." That is a property of the task
+set (both models passed all 30 fixtures in both arms, on every base
+task), not a property of the effect you're trying to size for.
 
-- smallest effect that could reach significance: `t(0.975, 29) x se =
-  2.045230 x 1.1111 = 2.27 points` (the essay rounds this to "about 2.3").
-- smallest effect resolvable at 80% power: `(t(0.975, 29) + t(0.80, 29))
-  x se = (2.045230 + 0.85377) x 1.1111 = 3.22 points` (the essay rounds
-  this to "about 3.2").
-
-A second, harder-tier run in the same battery, at `k = 15` clusters
-(`df = 14`, `t(0.975, 14) = 2.145`), had a *worse* resolution -- CI
-half-width about 4.8 points, roughly double the 30-cluster run -- because
-halving the cluster count outweighed moving the outcomes off the ceiling.
-That is the general lesson, not a coincidence of this particular run:
-adding base tasks is not automatically enough if your task set is
-saturated (near 0% or 100% for the models you're testing) -- a design
-near the ceiling has very little cluster-to-cluster variance to detect a
-real effect against, and no number of additional clusters fixes a task
-set that both models already pass or fail near-uniformly. If your pilot
-run shows outcomes clustered near 0% or 100%, budget for harder tasks
-before budgeting for more of them.
+**The fix is harder fixtures, not more of the same ones.** A pilot at or
+near the ceiling (models passing nearly everything, in both arms) cannot
+produce the variance the sizing formula needs, and no amount of
+additional same-difficulty base tasks fixes that -- `s` stays at or near
+zero. Before you trust any `k` this procedure recommends, check that your
+pilot's outcomes are not clustered at 0% or 100% pass rate across the
+board. If they are, add base tasks difficult enough that at least some of
+them produce a mixed pass/fail outcome across your panel, re-run the
+pilot, and only then use the recipe in the next section to size a full
+run.
 
 ### Sizing your own run
 
