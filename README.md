@@ -12,16 +12,19 @@ Run them against your own agents.
 
 ```
 fixtures/
-  bugfix/      6 fixtures (2 base tasks x 3 format variants)
+  bugfix/      12 fixtures (4 base tasks x 3 format variants)
   chore/       3 fixtures (1 base task x 3 format variants)
   feature/     9 fixtures (3 base tasks x 3 format variants)
   refactor/    6 fixtures (2 base tasks x 3 format variants)
   README.md    the methodology -- read this first
 docs/
-  running-the-battery.md   how to run the fixtures against any model/agent
+  running-the-battery.md          how to run the fixtures against any model/agent
+  drop2-run-conditions.md         how to configure a thinking field-present/field-absent A-B, incl. the adaptive-default trap
+  drop2-method-power-math.md      paired/clustered analysis recipe + power math, worked with real numbers
 results/
-  reference-results.csv    raw per-fixture per-model outcome rows
-  README.md                what those rows are (and aren't)
+  reference-results.csv               raw per-fixture per-model outcome rows
+  drop2-thinking-onoff-reference.csv  reference rows for the thinking field-present/field-absent method kit
+  README.md                           what those rows are (and aren't)
 governance/
   denylist.txt                the content deny-list
   check_denylist.py           CI: scans every file against it
@@ -33,36 +36,12 @@ Start with [`fixtures/README.md`](fixtures/README.md) for the matched-pairs
 methodology, then [`docs/running-the-battery.md`](docs/running-the-battery.md)
 to run it yourself.
 
-## Governance -- what this repo will never contain
+## CI checks
 
-This is a public fixtures repo maintained by a company that also builds
-non-public agent tooling. That split is enforced structurally, not just
-by intent, and we're publishing the mechanism, not just the promise:
-
-1. **Every fixture is stamped.** `metadata.public_release: true` and
-   `metadata.provenance: "original-authored"` are required on every file
-   under `fixtures/`. CI (`governance/check_fixture_stamps.py`) fails any
-   fixture missing either key -- see [CONTRIBUTING.md](CONTRIBUTING.md)
-   for what the provenance claim means.
-2. **A deny-list scanner runs on every push and PR.**
-   `governance/check_denylist.py` regex-scans every tracked file against
-   `governance/denylist.txt` -- internal product/codename vocabulary,
-   internal infrastructure identifiers, credential-shaped strings, and
-   personal names beyond the LICENSE copyright line. One narrow,
-   explicit, per-file allowlist entry exists (the documented runner
-   invocation in `docs/running-the-battery.md`) -- everything else, in
-   every file including that one, is enforced.
-3. **On the private side**, this repo is updated from our internal
-   monorepo through exactly one script, which copies only from an
-   explicit per-fixture allowlist and hard-refuses any path from our
-   confidential reasoning-fixture family by construction (tested, not
-   just documented).
-4. **This repo will never contain**: real hypotheses, real fleet or
-   customer data, internal telemetry or trace data, internal decision
-   records, credentials, or the confidential fixture family referenced
-   above. If you ever find something here that looks like it violates
-   this, please open an issue -- that's a bug in our process, not a
-   one-off mistake to quietly fix.
+CI runs two checks on every push: a generic-pattern content scan
+(`governance/check_denylist.py`) and fixture provenance-stamp
+verification (`governance/check_fixture_stamps.py`). Contributor PRs
+must pass both.
 
 ## License
 

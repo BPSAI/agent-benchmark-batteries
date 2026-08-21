@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""CI gate: fail on internal vocabulary anywhere in the tracked tree.
+"""CI gate: fail on denylisted content anywhere in the tracked tree.
 
 Regex patterns live in governance/denylist.txt (one per line, '#' comments
-and blank lines ignored). Matching is case-insensitive.
-
-ALLOWLIST below carves out narrow, explicit (path, pattern) exceptions --
-never a whole-file exemption. This keeps the "paircoder matrix-run
-invocation is documented in exactly one place" governance promise
-mechanically enforced: only the named pattern is permitted in the named
-file, every other denylist pattern (secrets, personal names, the
-confidential fixture family, etc.) still applies there too.
+and blank lines ignored). Matching is case-insensitive. Every tracked
+file is scanned against every pattern, with no exemptions -- including
+this script and the pattern file itself.
 """
 from __future__ import annotations
 
@@ -20,27 +15,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DENYLIST_FILE = REPO_ROOT / "governance" / "denylist.txt"
-
-# (relative file path, denylist pattern string) pairs that are permitted.
-# The runner guide documents the `bpsai-pair`/paircoder CLI invocation as
-# ONE way to run the battery -- see docs/running-the-battery.md.
-ALLOWLIST: set[tuple[str, str]] = {
-    ("docs/running-the-battery.md", "bpsai"),
-    ("docs/running-the-battery.md", "paircoder"),
-}
-
-# Top-level path components the scanner never descends into (VCS internals).
-EXCLUDED_PATHS: set[str] = {".git"}
-
-# Whole files exempt from scanning entirely (not per-pattern, per-file like
-# ALLOWLIST above): the denylist definition and scanner source themselves
-# necessarily *name* every pattern in comments/docstrings/string literals.
-# That is the tooling describing its own rules, not a content leak -- no
-# confidential vocabulary, secrets, or fleet content ever lives here.
-EXCLUDED_FILES: set[str] = {
-    "governance/denylist.txt",
-    "governance/check_denylist.py",
-}
 
 
 def load_patterns(path: Path) -> list[str]:
@@ -62,18 +36,12 @@ def tracked_files() -> list[Path]:
         text=True,
         check=True,
     )
-    return [
-        REPO_ROOT / rel
-        for rel in result.stdout.splitlines()
-        if rel and Path(rel).parts[0] not in EXCLUDED_PATHS
-    ]
+    return [REPO_ROOT / rel for rel in result.stdout.splitlines() if rel]
 
 
 def scan_file(path: Path, patterns: list[str]) -> list[str]:
     """Return violation strings ('pattern @ line N') for one file."""
     rel_path = path.relative_to(REPO_ROOT).as_posix()
-    if rel_path in EXCLUDED_FILES:
-        return []
     try:
         text = path.read_text()
     except (UnicodeDecodeError, OSError):
@@ -81,8 +49,6 @@ def scan_file(path: Path, patterns: list[str]) -> list[str]:
 
     violations = []
     for pattern in patterns:
-        if (rel_path, pattern) in ALLOWLIST:
-            continue
         regex = re.compile(pattern, re.IGNORECASE)
         for lineno, line in enumerate(text.splitlines(), start=1):
             if regex.search(line):
@@ -105,12 +71,15 @@ def main() -> int:
         all_violations.extend(scan_file(f, patterns))
 
     if all_violations:
-        print("Denylist scan FAILED -- internal vocabulary detected:", file=sys.stderr)
+        print("Denylist scan FAILED -- denylisted content detected:", file=sys.stderr)
         for v in all_violations:
             print(f"  - {v}", file=sys.stderr)
         return 1
 
-    print(f"OK: denylist scan clean ({len(patterns)} patterns, {len(tracked_files())} files).")
+    print(
+        f"OK: denylist scan clean ({len(patterns)} patterns, "
+        f"{len(tracked_files())} files, zero exemptions)."
+    )
     return 0
 
 
