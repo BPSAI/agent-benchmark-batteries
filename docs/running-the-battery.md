@@ -1,10 +1,8 @@
 # Running the battery
 
 This document explains how to run the `fixtures/` battery against any
-model or coding agent, and points to one worked example (our own
-`bpsai-pair` CLI) so the instructions aren't purely abstract. Nothing
-below requires that tool -- the fixture files are plain JSON and the
-protocol is provider-agnostic.
+model or coding agent. The fixture files are plain JSON and the protocol
+below is provider-agnostic -- there is no required tool or SDK.
 
 ## The fixture contract
 
@@ -48,30 +46,51 @@ it is meant to be reproducible without another model in the loop. Bring
 your own judge/grader on top if you want a richer score; report both if
 you do.
 
-## One worked example: `bpsai-pair`
+## Implementing the protocol yourself
 
-Our own CLI, `bpsai-pair`, ships a runner that implements the protocol
-above end to end, if you'd rather not write your own harness. It bundles
-a copy of this fixture set internally, so the invocation doesn't take a
-path argument. This repo's `fixtures/` is the source of truth for the
-fixture contents -- if you ever find the bundled copy differs from what's
-here, that's a bug in the bundling, not an authoritative variant; open an
-issue against this repo:
+The fixture contract and protocol above are the complete, provider-
+agnostic spec -- there's no separate tool to install. Implementing the
+dispatch loop against any HTTP client or agent SDK is about a page of
+code:
 
-```bash
-pip install bpsai-pair
-bpsai-pair benchmark matrix-run --family fixture-set-v3
-bpsai-pair benchmark matrix-run --family fixture-set-v3 --include-paid  # add paid providers
+```python
+import glob
+import json
+
+results = []
+for path in glob.glob("fixtures/*/*.json"):
+    fixture = json.load(open(path))
+
+    # Fresh/stateless call -- no prior turns, no other fixtures in context.
+    completion = your_agent_client.send(
+        system=fixture["system_prompt"],
+        user=fixture["input_prompt"],
+    )
+
+    # Score against expected_shape and classify per "Protocol" above
+    # (produces_code / min_length / must_contain / must_not_contain /
+    # required_sections / json_schema_keys -> pass/partial/fail/refused).
+    outcome = score(completion, fixture["expected_shape"])
+
+    results.append({
+        "fixture_id": fixture["id"],
+        "base_task_id": fixture["metadata"]["base_task_id"],
+        "format_variant": fixture["metadata"]["format_variant"],
+        "outcome": outcome,
+    })
+
+# Repeat this entire loop N >= 3 times before computing any rate --
+# see "Repetitions are required" below. Write each round's results
+# somewhere separate (don't overwrite the last round) and concatenate
+# before grouping by cell.
 ```
 
-This dispatches all 30 fixtures against the configured model panel and
-writes a `matrix.json`/`matrix.csv` with one row per `(fixture, model)`
-pair, scored per the protocol above.
-
-This is one option among many, provided for convenience -- the fixture
-files and scoring rules above are the actual contract, and work against
-any harness that can send a system/user prompt pair and inspect the
-completion.
+That's the whole loop: read a fixture, send it as a fresh system/user
+turn, score the completion against `expected_shape`, record the four
+columns above. Nothing here depends on a particular vendor SDK or CLI --
+swap `your_agent_client.send` for whatever call your harness makes (an
+HTTP POST, an SDK method, a CLI subprocess) and the rest of this document
+applies unchanged.
 
 ## Repetitions are required -- N=1 gives no usable rate
 

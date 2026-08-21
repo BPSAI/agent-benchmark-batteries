@@ -182,6 +182,136 @@ would indicate non-determinism in the model or the harness rather than a
 thinking effect -- a sanity check you get for free by including it,
 without asserting anything about what the model does or doesn't support.
 
+## Configuring the arm on other vendors
+
+Everything above is this drop's own panel, which is Claude-only. If
+you're running the A-B against a different vendor, you need that
+vendor's own documented request shape -- it will not match the tables
+above. This section covers the four non-Anthropic vendors whose
+documentation could be fetched and read live in the session that wrote
+this section; **every row below is a claim about that vendor's
+documentation on the date it was fetched, not a claim this repo has
+measured.** None of these vendors are in this drop's reference run --
+`drop2-thinking-onoff-reference.csv` contains Claude and one local
+Ollama model only. Treat every fact below as "documented request shape
+as of the access date" and re-check it yourself before relying on it;
+vendor docs change.
+
+**Coverage.** This section covers OpenAI, Google Gemini, DeepSeek, and
+xAI -- the only vendors whose live documentation was successfully
+fetched while writing this section. If your vendor isn't here, that's
+because its docs weren't fetched, not because they were checked and
+found to have nothing -- go to the vendor's own current documentation
+rather than assuming an omission means "no such parameter."
+
+### OpenAI
+
+Source: [developers.openai.com/api/docs/guides/reasoning](https://developers.openai.com/api/docs/guides/reasoning)
+(redirects from `platform.openai.com/docs/guides/reasoning`), accessed
+2026-08-21.
+
+- **Field-absent means:** documented default, not a blanket "off" --
+  the docs state "If you omit `reasoning.effort`, GPT-5.6 defaults to
+  `medium` in both modes." Omitting the field does not stop reasoning on
+  this model family.
+- **Documented enable shape:** `reasoning: {"effort": "<value>"}` in the
+  Responses API, where `<value>` is model-dependent and can include
+  `none`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`.
+- **Documented disable shape:** the docs don't name a separate disable
+  flag. The lowest documented value, `none`, is described as being for
+  "latency-critical tasks that do not benefit from any reasoning" --
+  the closest documented approximation to off, but the docs frame it as
+  the bottom of the effort scale, not a distinct boolean. Don't assume
+  `effort: "none"` means zero reasoning tokens without checking the
+  usage field below on your own rows.
+- **Usage field for the verification step:** `usage.output_tokens_details.reasoning_tokens`
+  on the response object (confirmed from a worked example in the fetched
+  docs).
+
+### Google Gemini
+
+Source: [ai.google.dev/gemini-api/docs/thinking](https://ai.google.dev/gemini-api/docs/thinking),
+accessed 2026-08-21.
+
+- **Field-absent means:** per-model documented default, and it is not
+  uniform across the panel. The docs state "Gemini models engage in
+  dynamic thinking by default, automatically adjusting the amount of
+  reasoning effort based on the complexity of the request," and publish
+  a per-model default table -- most listed models default to thinking
+  **On** at a specific level (e.g. `gemini-3.7-flash`: on, medium), but
+  at least one, `gemini-2.5-flash-lite`, is documented as defaulting to
+  **Off**. There is no single answer for "this vendor" -- check the
+  specific model in the vendor's own table.
+- **Documented enable shape:** `generation_config: {"thinking_level": "<value>"}`,
+  where `<value>` is one of `minimal`, `low`, `medium`, `high` and the
+  supported subset is model-dependent (not every model supports
+  `minimal`).
+  ```json
+  {"model": "gemini-3.7-flash", "generation_config": {"thinking_level": "low"}}
+  ```
+- **Documented disable shape:** **the fetched docs don't answer this.**
+  No `"off"` (or equivalent) value is listed among `thinking_level`'s
+  documented values, and no separate boolean or budget-to-zero field is
+  documented on this page. The one model that defaults to Off gets there
+  from its own default, not from a request value you can send to any
+  model. If you need a true off arm on a Gemini model, that's an open
+  question this fetch didn't resolve -- don't assume a shape exists just
+  because other vendors have one.
+- **Usage field for the verification step:** `usage.total_thought_tokens`
+  on the interaction/response object.
+
+### DeepSeek
+
+Source: [api-docs.deepseek.com/guides/thinking_mode](https://api-docs.deepseek.com/guides/thinking_mode/),
+accessed 2026-08-21 (usage-field check also against
+[api-docs.deepseek.com/quick_start/token_usage](https://api-docs.deepseek.com/quick_start/token_usage/),
+same date).
+
+- **Field-absent means:** on, not off. The docs state "Thinking mode is
+  enabled by default, with the default effort being `high`."
+- **Documented enable shape:** three documented request formats,
+  depending on which API surface you're calling through --
+  - OpenAI format: `{"thinking": {"type": "enabled"}}` plus
+    `"reasoning_effort": "low"/"high"/"max"`.
+  - Anthropic-compatible format: `{"reasoning": {"effort": "none/low/high/max"}}`.
+  - Responses API format: `{"output_config": {"effort": "low/high/max"}}`.
+- **Documented disable shape:** explicitly documented, unlike the other
+  three vendors in this section -- OpenAI format
+  `{"thinking": {"type": "disabled"}}`, or Anthropic-compatible format
+  `{"reasoning": {"effort": "none"}}` (the docs say plainly: "`none`
+  disables thinking mode").
+- **Usage field for the verification step:** **the fetched docs don't
+  name one.** Neither the thinking-mode guide nor the token-usage guide
+  documents a dedicated reasoning-token count field at the URLs fetched;
+  the chain-of-thought content itself streams back in a
+  `reasoning_content` field (text, not a token count). If you need a
+  reasoning-token count for the verification step on this vendor, that's
+  unresolved by this fetch -- check your own response payloads directly
+  rather than assuming a field name from another vendor carries over.
+
+### xAI
+
+Source: [docs.x.ai/developers/model-capabilities/text/reasoning](https://docs.x.ai/developers/model-capabilities/text/reasoning)
+(redirects from `docs.x.ai/docs/guides/reasoning`), accessed 2026-08-21.
+
+- **Field-absent means:** on, at the documented default effort. The docs
+  state, for the models that support the parameter: "If not specified,
+  `reasoning_effort` defaults to `high`."
+- **Documented enable shape:** `reasoning_effort: "<value>"` (SDK) or
+  `reasoning: {"effort": "<value>"}` (Responses API format), where
+  `<value>` is `low`/`medium`/`high`/`xhigh` on models that support the
+  parameter (`xhigh` only on newer models; older supported models treat
+  `xhigh` requests as `high`). Not every model in the vendor's lineup
+  supports the parameter at all -- check the specific model.
+- **Documented disable shape:** none. Stated as flatly as any fact in
+  this section: **"Reasoning cannot be disabled."** If you need a true
+  off arm on this vendor's reasoning-capable models, the fetched docs
+  say outright that no such request exists -- don't go looking for one.
+- **Usage field for the verification step:** the docs state "Usage
+  metrics expose `reasoning_tokens`"; the exact nesting path within the
+  usage object wasn't shown in the fetched section -- confirm the full
+  path against your own response payload before wiring a script to it.
+
 ## Verification step, restated
 
 Before trusting any A-B result from your own run:
@@ -204,3 +334,12 @@ Before trusting any A-B result from your own run:
 
 This check costs nothing extra -- the reasoning-token count is already in
 every response you're scoring for `pass`/`fail` anyway.
+
+**Running this on a non-Anthropic vendor:** the check is identical, but
+the field name isn't `tokens_reasoning` -- use that vendor's own
+documented usage field from "Configuring the arm on other vendors" above
+(`usage.output_tokens_details.reasoning_tokens` for OpenAI,
+`usage.total_thought_tokens` for Gemini, `reasoning_tokens` somewhere in
+the usage object for xAI -- confirm the exact path yourself; DeepSeek's
+fetched docs don't name one at all, so on that vendor you'd need to find
+the field from your own response payload before this check is possible).
