@@ -19,9 +19,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DENYLIST_FILE = REPO_ROOT / "governance" / "denylist.txt"
 
-# Top-level path components the scanner never descends into (VCS internals).
-EXCLUDED_PATHS: set[str] = {".git"}
-
 
 def load_patterns(path: Path) -> list[str]:
     patterns = []
@@ -42,11 +39,7 @@ def tracked_files() -> list[Path]:
         text=True,
         check=True,
     )
-    return [
-        REPO_ROOT / rel
-        for rel in result.stdout.splitlines()
-        if rel and Path(rel).parts[0] not in EXCLUDED_PATHS
-    ]
+    return [REPO_ROOT / rel for rel in result.stdout.splitlines() if rel]
 
 
 def scan_file(path: Path, patterns: list[str]) -> list[str]:

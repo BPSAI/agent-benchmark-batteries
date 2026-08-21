@@ -257,8 +257,11 @@ accessed 2026-08-21.
   model. If you need a true off arm on a Gemini model, that's an open
   question this fetch didn't resolve -- don't assume a shape exists just
   because other vendors have one.
-- **Usage field for the verification step:** `usage.total_thought_tokens`
-  on the interaction/response object.
+- **Usage field for the verification step:** the fetched docs show
+  `total_thought_tokens` used as `interaction.usage.total_thought_tokens`
+  in a worked example, but don't separately establish the full field
+  path as a stable contract -- confirm the full path against your own
+  response payload before wiring a script to it.
 
 ### DeepSeek
 
@@ -339,7 +342,8 @@ every response you're scoring for `pass`/`fail` anyway.
 the field name isn't `tokens_reasoning` -- use that vendor's own
 documented usage field from "Configuring the arm on other vendors" above
 (`usage.output_tokens_details.reasoning_tokens` for OpenAI,
-`usage.total_thought_tokens` for Gemini, `reasoning_tokens` somewhere in
-the usage object for xAI -- confirm the exact path yourself; DeepSeek's
-fetched docs don't name one at all, so on that vendor you'd need to find
-the field from your own response payload before this check is possible).
+`total_thought_tokens` for Gemini, `reasoning_tokens` somewhere in the
+usage object for xAI -- confirm the exact path yourself for the latter
+two; DeepSeek's fetched docs don't name one at all, so on that vendor
+you'd need to find the field from your own response payload before this
+check is possible).

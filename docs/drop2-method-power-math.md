@@ -94,8 +94,8 @@ produces when the pilot isn't degenerate. Run the recipe yourself against
 this model's rows to check both this and the four-model result above.
 
 Two structurally different outcomes came out of the identical procedure
-applied to six columns of the same 360-row file. That is the entire point
-of the next section.
+applied to six values of the `model` column in the same 360-row file.
+That is the entire point of the next section.
 
 ## The power question: how many fixtures do you need?
 
@@ -142,9 +142,11 @@ four passed all 30 fixtures in both arms, on every base task), not a
 property of the effect you're trying to size for.
 
 **For `fable`, the same file gives you a real `se` to size from**:
-`s = se_pilot * sqrt(k_pilot) = 0.0598 * sqrt(10) = 0.1892` -- the
+`s = se_pilot * sqrt(k_pilot) = 0.059835 * sqrt(10) = 0.189215` -- the
 cluster standard deviation recovered in the previous section, which is
-exactly the number the recipe computed directly there. Plugging that
+exactly the number the recipe computed directly there (shown here at
+higher precision than the `se = 0.0598` in that section so the
+multiplication reproduces at the printed digits). Plugging that
 into step 4 below for a candidate `k` produces a real, nonzero sizing
 answer, unlike the other four models' pilots. The difference between the
 two outcomes isn't the fixtures or the recipe -- it's whether the model's

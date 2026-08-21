@@ -41,7 +41,7 @@
 
 # --- path shapes ---
 /home/[a-zA-Z0-9_.-]+/
-\.[a-zA-Z][a-zA-Z0-9_-]*/histor[y]/
+\.[a-zA-Z][a-zA-Z0-9_-]*/histor[y]\b
 
 # --- credential-shaped strings (defense in depth; GitHub secret scanning is primary) ---
 sk-ant-[a-zA-Z0-9-]+

@@ -111,8 +111,9 @@ Every fixture's `metadata` carries, beyond the standard `source`:
 ## Running the battery
 
 See [`docs/running-the-battery.md`](../docs/running-the-battery.md) for
-generic run instructions (any model or agent harness) plus one worked
-example. Each base task should be graded 3x under different formats when
+generic run instructions (any model or agent harness) plus the protocol
+and a reference pseudocode implementation. Each base task should be
+graded 3x under different formats when
 you compute a rate -- see "Repetitions are required" below -- so seeding
 any calibration process from a single run would triple-count, and skew
 toward whichever format a given agent handles best, every base task's
@@ -137,7 +138,8 @@ suffix explicitly: `short` -> `short`, `embed-neutral` ->
 
 Whatever harness you use (see
 [`docs/running-the-battery.md`](../docs/running-the-battery.md) for the
-protocol and one worked example), dispatching each `(fixture, model)`
+protocol and a reference pseudocode implementation), dispatching each
+`(fixture, model)`
 pair exactly **once** gives a "rate" that is either 0% or 100% for that
 cell and carries no statistical weight -- it is not a refusal-rate or a
 pass-rate, just one observation. **Do not report a per-cell fraction from

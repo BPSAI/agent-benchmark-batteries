@@ -57,6 +57,8 @@ code:
 import glob
 import json
 
+MODEL_ID = "your-model-id"  # whatever your harness is dispatching this run
+
 results = []
 for path in glob.glob("fixtures/*/*.json"):
     fixture = json.load(open(path))
@@ -73,6 +75,7 @@ for path in glob.glob("fixtures/*/*.json"):
     outcome = score(completion, fixture["expected_shape"])
 
     results.append({
+        "model_id": MODEL_ID,
         "fixture_id": fixture["id"],
         "base_task_id": fixture["metadata"]["base_task_id"],
         "format_variant": fixture["metadata"]["format_variant"],
@@ -86,7 +89,7 @@ for path in glob.glob("fixtures/*/*.json"):
 ```
 
 That's the whole loop: read a fixture, send it as a fresh system/user
-turn, score the completion against `expected_shape`, record the four
+turn, score the completion against `expected_shape`, record the five
 columns above. Nothing here depends on a particular vendor SDK or CLI --
 swap `your_agent_client.send` for whatever call your harness makes (an
 HTTP POST, an SDK method, a CLI subprocess) and the rest of this document
