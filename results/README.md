@@ -101,11 +101,18 @@ majority doesn't tell you what the fifth model will do.
 **Cost reproduces fine at this scale**, because it needs no contrast to
 be real -- it's a direct sum over rows, not a difference-of-proportions
 with a ceiling problem. Paid-model rows only (30 fixtures x 5 metered
-models x 2 arms = 300 of the 360 rows): field-present arm totaled $5.91,
-field-absent arm $5.56. The two models where field-absent means off:
+models x 2 arms = 300 of the 360 rows): field-present arm totaled $5.65,
+field-absent arm $5.30. The two models where field-absent means off:
 `opus` cost $1.24 field-present vs. $1.08 field-absent (+14.6%); `haiku`
 cost $0.48 vs. $0.34 (+42.8%). Recompute these yourself from the
 `cost_usd` column to check them.
+
+**Prices used.** `cost_usd` is computed at each model's published
+per-million-token input/output rate, in effect when this reference run
+was dispatched: `opus` $5/$25, `haiku` $1/$5, `opus-5` $5/$25, `sonnet`
+$2/$10, `fable` $10/$50 (list price -- a cross-check of this rate
+against actual billing is not complete, so this one figure is stated as
+list price only, nothing more).
 
 **A note on repetitions.** The "Contributing rows" rule above (N >= 3 per
 cell, no publishing a rate from a single pass) is a contributor-submission

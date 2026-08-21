@@ -47,14 +47,18 @@ by intent, and we're publishing the mechanism, not just the promise:
    under `fixtures/`. CI (`governance/check_fixture_stamps.py`) fails any
    fixture missing either key -- see [CONTRIBUTING.md](CONTRIBUTING.md)
    for what the provenance claim means.
-2. **A deny-list scanner runs on every push and PR.**
-   `governance/check_denylist.py` regex-scans every tracked file against
-   `governance/denylist.txt` -- internal product/codename vocabulary,
-   internal infrastructure identifiers, credential-shaped strings, and
-   personal names beyond the LICENSE copyright line. One narrow,
-   explicit, per-file allowlist entry exists (the documented runner
-   invocation in `docs/running-the-battery.md`) -- everything else, in
-   every file including that one, is enforced.
+2. **A deny-list scanner runs on every push and PR, with zero
+   exemptions.** `governance/check_denylist.py` regex-scans every
+   tracked file in this repo against `governance/denylist.txt` -- no
+   file, path, or pattern is excluded, including the pattern file and
+   the scanner script themselves. The patterns are generic shapes only
+   (local absolute paths, cloud-resource naming conventions, published
+   credential prefix formats -- see the design note at the top of
+   `denylist.txt`), never a literal name, codename, or id scheme
+   specific to one internal system. That split is deliberate: what a
+   generic public pattern can catch is what you can verify from this
+   repo alone; anything more specific is caught by stricter review that
+   runs before content ever reaches this repo, not described here.
 3. **On the private side**, this repo is updated from our internal
    monorepo through exactly one script, which copies only from an
    explicit per-fixture allowlist and hard-refuses any path from our
