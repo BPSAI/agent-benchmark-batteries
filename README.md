@@ -36,50 +36,12 @@ Start with [`fixtures/README.md`](fixtures/README.md) for the matched-pairs
 methodology, then [`docs/running-the-battery.md`](docs/running-the-battery.md)
 to run it yourself.
 
-## Governance -- what this repo will never contain
+## CI checks
 
-This is a public fixtures repo maintained by a company that also builds
-non-public agent tooling. That split is enforced structurally, not just
-by intent, and we're publishing the mechanism, not just the promise:
-
-1. **Every fixture is stamped.** `metadata.public_release: true` and
-   `metadata.provenance: "original-authored"` are required on every file
-   under `fixtures/`. CI (`governance/check_fixture_stamps.py`) fails any
-   fixture missing either key -- see [CONTRIBUTING.md](CONTRIBUTING.md)
-   for what the provenance claim means.
-2. **A deny-list scanner runs on every push and PR, with zero
-   exemptions.** `governance/check_denylist.py` regex-scans every
-   tracked file in this repo against `governance/denylist.txt` -- no
-   file, path, or pattern is excluded, including the pattern file and
-   the scanner script themselves. The patterns are generic shapes only
-   (local absolute paths, cloud-resource naming conventions, published
-   credential prefix formats -- see the design note at the top of
-   `denylist.txt`), never a literal name, codename, or id scheme
-   specific to one internal system. That split is deliberate: what a
-   generic public pattern can catch is what you can verify from this
-   repo alone; anything more specific is caught by stricter review that
-   runs before content ever reaches this repo, not described here.
-3. **On the private side**, this repo is updated from our internal
-   monorepo through exactly one script, which copies only from an
-   explicit per-fixture allowlist and hard-refuses any path from our
-   confidential reasoning-fixture family by construction (the receiving
-   side of that promise -- the two governance checks in point 1 and
-   point 2 above -- is the part you can verify yourself, from this repo
-   alone).
-4. **This repo will never contain**: real hypotheses, real fleet or
-   customer data, internal telemetry or trace data, internal decision
-   records, credentials, or the confidential fixture family referenced
-   above. If you ever find something here that looks like it violates
-   this, please open an issue -- that's a bug in our process, not a
-   one-off mistake to quietly fix.
-5. **The product boundary applies to drops, too.** A larger,
-   production-shaped task corpus, its graders, and its harder fixture
-   variants stay on the product side of the line in point 3 above and
-   are never published here. What a drop publishes is a method kit: the
-   sample fixtures (still just this repo's 30), reference rows over
-   those fixtures, the analysis math, and guidance for building your own
-   task set with the same construction -- never a private corpus's own
-   figures.
+CI runs two checks on every push: a generic-pattern content scan
+(`governance/check_denylist.py`) and fixture provenance-stamp
+verification (`governance/check_fixture_stamps.py`). Contributor PRs
+must pass both.
 
 ## License
 

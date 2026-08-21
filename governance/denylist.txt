@@ -1,38 +1,12 @@
 # Deny-list for the content scanner (see governance/check_denylist.py).
 #
 # One regex per non-comment, non-blank line. Matching is case-insensitive.
-# The scanner scans every tracked file in this repo with no whole-file or
-# whole-path exemptions -- including this file and the scanner script
-# itself. That is a deliberate design constraint, not an oversight: a
-# denylist file that exempts itself from its own scan cannot be trusted
-# to describe what it actually enforces.
+# Every tracked file in this repo is scanned against every pattern below,
+# with no exemptions, including this file and the scanner script.
 #
-# Design. Every pattern below is a generic shape -- a category of thing
-# that should never appear in a public repo (a local absolute path, a
-# cloud-resource naming convention, a published credential prefix
-# format) -- never a specific literal name, codename, or id scheme that
-# belongs to one particular internal system. A pattern that can only be
-# written by including the exact literal it exists to catch does not
-# belong in a file that ships in the open, so none of those are here.
-# Two of the patterns below are written with a single-character bracket
-# in the middle of an otherwise-plain word (functionally identical to
-# the plain word when matching real content) specifically so that the
-# pattern's own source line here does not trip the scanner against
-# itself once every file, including this one, is in scope. Anything
-# more specific than a generic shape -- the things a generic pattern
-# structurally cannot catch -- is caught by stricter review that runs
-# before content ever reaches this repo; that review is not described
-# here, on the same public-file principle as everything above.
-#
-# Categories:
-#   - Infra shapes: cloud-resource hostname/naming conventions that
-#     indicate real infrastructure configuration leaked into a fixture
-#     or doc by mistake.
-#   - Path shapes: local absolute paths and internal directory
-#     conventions that should never appear in committed, public content.
-#   - Credential-shaped strings: published vendor prefix formats for API
-#     keys/tokens, as a defense-in-depth backstop independent of
-#     GitHub's own secret scanning.
+# Two patterns below use a single-character bracket in the middle of a
+# plain word (e.g. `intern[a]l`) so the pattern's own text here does not
+# match itself -- do not "simplify" that spelling.
 
 # --- infra shapes ---
 \.azurecr\.io\b
@@ -43,7 +17,7 @@
 /home/[a-zA-Z0-9_.-]+/
 \.[a-zA-Z][a-zA-Z0-9_-]*/histor[y]\b
 
-# --- credential-shaped strings (defense in depth; GitHub secret scanning is primary) ---
+# --- credential-shaped strings ---
 sk-ant-[a-zA-Z0-9-]+
 sk-proj-[a-zA-Z0-9-]+
 AKIA[0-9A-Z]{16}

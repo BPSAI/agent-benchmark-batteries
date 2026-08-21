@@ -2,12 +2,9 @@
 """CI gate: fail on denylisted content anywhere in the tracked tree.
 
 Regex patterns live in governance/denylist.txt (one per line, '#' comments
-and blank lines ignored). Matching is case-insensitive.
-
-This scanner has NO whole-file, whole-path, or per-pattern exemptions.
-Every tracked file is scanned against every pattern, including this
-script and the pattern file itself -- see the design note at the top of
-denylist.txt for why the patterns are written the way they are.
+and blank lines ignored). Matching is case-insensitive. Every tracked
+file is scanned against every pattern, with no exemptions -- including
+this script and the pattern file itself.
 """
 from __future__ import annotations
 

@@ -93,7 +93,7 @@ mean +/- t*se = [-0.1687, +0.1020]` -> **[-16.9, +10.2] points**,
 produces when the pilot isn't degenerate. Run the recipe yourself against
 this model's rows to check both this and the four-model result above.
 
-Two structurally different outcomes came out of the identical procedure
+Two categorically different outcomes came out of the identical procedure
 applied to six values of the `model` column in the same 360-row file.
 That is the entire point of the next section.
 
