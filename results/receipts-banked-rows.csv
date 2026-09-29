@@ -1,0 +1,78 @@
+cut,model,lab,access,completed,n,spend_usd,usd_per_completed,basis,rounds_per_fixture,dates
+code,claude-fable-5,Anthropic,API,68,300,,,rate-not-confirmed,15,2026-08-13 – 2026-08-14
+code,claude-haiku-4-5,Anthropic,API,98,100,2.0849,0.0211,re-scored,5,2026-08-14
+code,claude-opus-4-8,Anthropic,API,286,300,19.2233,0.0649,re-scored,15,2026-08-13 – 2026-08-14
+code,claude-opus-5,Anthropic,API,96,100,15.0332,0.1534,re-scored,5,2026-08-14
+code,claude-sonnet-5,Anthropic,API,98,100,3.3689,0.0344,invoice,5,2026-08-14
+code,DeepSeek V4 Flash (0731),DeepSeek,OpenRouter,97,100,0.1900,0.0019,re-scored,5,2026-08-13
+code,DeepSeek V4 Pro,DeepSeek,OpenRouter,98,100,0.9591,0.0098,invoice,5,2026-08-13
+code,Devstral,Mistral AI,Local,92,100,,,no-bill,5,2026-08-14
+code,Gemini 3.1 Pro (preview),Google,OpenRouter,100,100,6.7758,0.0678,invoice,5,2026-08-13
+code,Gemini 3.6 Flash,Google,OpenRouter,100,100,4.6218,0.0462,invoice,5,2026-08-13
+code,Gemma 4 31B,Google,Local,100,100,,,no-bill,5,2026-08-13
+code,GLM 4.7 Flash,Z-AI,Local,93,100,,,no-bill,5,2026-08-13
+code,GLM 5.2,Z-AI,OpenRouter,98,100,0.9274,0.0095,invoice,5,2026-08-13 – 2026-08-14
+code,GPT-5.6 Luna,OpenAI,OpenRouter,93,100,0.1107,0.0012,invoice,5,2026-08-13 – 2026-08-14
+code,GPT-5.6 Sol,OpenAI,OpenRouter,92,100,5.4973,0.0598,invoice,5,2026-08-13 – 2026-08-14
+code,GPT-5.6 Terra,OpenAI,OpenRouter,95,100,1.0342,0.0109,invoice,5,2026-08-13
+code,Granite 4.1 30B,IBM,Local,97,100,,,no-bill,5,2026-08-13
+code,Grok 4.5,xAI,OpenRouter,95,100,1.3261,0.0140,invoice,5,2026-08-13 – 2026-08-14
+code,Kimi K3,Moonshot AI,OpenRouter,94,100,10.4069,0.1107,invoice,5,2026-08-13 – 2026-08-14
+code,Nemotron 3 Nano 30B,NVIDIA,Local,92,100,,,no-bill,5,2026-08-13
+code,Phi-4 14B,Microsoft,Local,94,100,,,no-bill,5,2026-08-13
+code,Qwen3 8B,Alibaba,Local,183,200,,,no-bill,10,2026-08-13 – 2026-08-14
+code,Qwen3.6 27B (GGUF Q4_K_M build),Alibaba,Local,95,100,,,no-bill,5,2026-08-13
+code,Qwen3.8 Max,Alibaba,OpenRouter,100,100,9.3443,0.0934,invoice,5,2026-08-13 – 2026-08-14
+review-format,claude-fable-5,Anthropic,API,30,90,,,rate-not-confirmed,15,2026-08-13 – 2026-08-14
+review-format,claude-haiku-4-5,Anthropic,API,23,30,0.0903,0.0039,invoice,5,2026-08-14
+review-format,claude-opus-4-8,Anthropic,API,71,90,2.5354,0.0357,invoice,15,2026-08-13 – 2026-08-14
+review-format,claude-opus-5,Anthropic,API,27,30,3.2559,0.1206,invoice,5,2026-08-14
+review-format,claude-sonnet-5,Anthropic,API,21,30,0.8223,0.0392,invoice,5,2026-08-14
+review-format,DeepSeek V4 Flash (0731),DeepSeek,OpenRouter,14,30,0.0330,0.0024,invoice,5,2026-08-13
+review-format,DeepSeek V4 Pro,DeepSeek,OpenRouter,14,30,0.1815,0.0130,invoice,5,2026-08-13
+review-format,Devstral,Mistral AI,Local,22,30,,,no-bill,5,2026-08-14
+review-format,Gemini 3.1 Pro (preview),Google,OpenRouter,12,30,1.1289,0.0941,invoice,5,2026-08-13
+review-format,Gemini 3.6 Flash,Google,OpenRouter,9,30,0.6468,0.0719,invoice,5,2026-08-13
+review-format,Gemma 4 31B,Google,Local,6,30,,,no-bill,5,2026-08-13
+review-format,GLM 4.7 Flash,Z-AI,Local,16,30,,,no-bill,5,2026-08-13
+review-format,GLM 5.2,Z-AI,OpenRouter,14,30,0.1378,0.0098,invoice,5,2026-08-13 – 2026-08-14
+review-format,GPT-5.6 Luna,OpenAI,OpenRouter,6,30,0.0182,0.0030,invoice,5,2026-08-13 – 2026-08-14
+review-format,GPT-5.6 Sol,OpenAI,OpenRouter,7,30,0.6534,0.0933,invoice,5,2026-08-13 – 2026-08-14
+review-format,GPT-5.6 Terra,OpenAI,OpenRouter,7,30,0.1224,0.0175,invoice,5,2026-08-13
+review-format,Granite 4.1 30B,IBM,Local,26,30,,,no-bill,5,2026-08-13
+review-format,Grok 4.5,xAI,OpenRouter,2,30,0.3050,0.1525,invoice,5,2026-08-13 – 2026-08-14
+review-format,Kimi K3,Moonshot AI,OpenRouter,22,30,2.2738,0.1034,invoice,5,2026-08-13 – 2026-08-14
+review-format,Nemotron 3 Nano 30B,NVIDIA,Local,26,30,,,no-bill,5,2026-08-13
+review-format,Phi-4 14B,Microsoft,Local,24,30,,,no-bill,5,2026-08-13
+review-format,Qwen3 8B,Alibaba,Local,41,60,,,no-bill,10,2026-08-13 – 2026-08-14
+review-format,Qwen3.6 27B (GGUF Q4_K_M build),Alibaba,Local,21,30,,,no-bill,5,2026-08-13
+review-format,Qwen3.8 Max,Alibaba,OpenRouter,14,30,1.4978,0.1070,invoice,5,2026-08-13 – 2026-08-14
+documentation-chore,claude-fable-5,Anthropic,API,29,75,,,rate-not-confirmed,15,2026-08-13 – 2026-08-14
+documentation-chore,claude-haiku-4-5,Anthropic,API,25,25,0.0310,0.0012,invoice,5,2026-08-14
+documentation-chore,claude-opus-4-8,Anthropic,API,75,75,0.6109,0.0081,invoice,15,2026-08-13 – 2026-08-14
+documentation-chore,claude-opus-5,Anthropic,API,5,25,0.5727,,withdrawn,5,2026-08-14
+documentation-chore,claude-sonnet-5,Anthropic,API,25,25,0.0963,0.0039,invoice,5,2026-08-14
+documentation-chore,DeepSeek V4 Flash (0731),DeepSeek,OpenRouter,25,25,0.0101,0.0004,invoice,5,2026-08-13
+documentation-chore,DeepSeek V4 Pro,DeepSeek,OpenRouter,23,25,0.0735,0.0032,invoice,5,2026-08-13
+documentation-chore,Devstral,Mistral AI,Local,25,25,,,no-bill,5,2026-08-14
+documentation-chore,Gemini 3.1 Pro (preview),Google,OpenRouter,25,25,0.3393,0.0136,invoice,5,2026-08-13
+documentation-chore,Gemini 3.6 Flash,Google,OpenRouter,25,25,0.2601,0.0104,invoice,5,2026-08-13
+documentation-chore,Gemma 4 31B,Google,Local,25,25,,,no-bill,5,2026-08-13
+documentation-chore,GLM 4.7 Flash,Z-AI,Local,24,25,,,no-bill,5,2026-08-13
+documentation-chore,GLM 5.2,Z-AI,OpenRouter,25,25,0.0385,0.0015,invoice,5,2026-08-13 – 2026-08-14
+documentation-chore,GPT-5.6 Luna,OpenAI,OpenRouter,25,25,0.0050,0.0002,invoice,5,2026-08-13 – 2026-08-14
+documentation-chore,GPT-5.6 Sol,OpenAI,OpenRouter,25,25,0.1853,0.0074,invoice,5,2026-08-13 – 2026-08-14
+documentation-chore,GPT-5.6 Terra,OpenAI,OpenRouter,25,25,0.0300,0.0012,invoice,5,2026-08-13
+documentation-chore,Granite 4.1 30B,IBM,Local,24,25,,,no-bill,5,2026-08-13
+documentation-chore,Grok 4.5,xAI,OpenRouter,25,25,0.0736,0.0029,invoice,5,2026-08-13 – 2026-08-14
+documentation-chore,Kimi K3,Moonshot AI,OpenRouter,9,25,0.3304,,withdrawn,5,2026-08-13 – 2026-08-14
+documentation-chore,Nemotron 3 Nano 30B,NVIDIA,Local,25,25,,,no-bill,5,2026-08-13
+documentation-chore,Phi-4 14B,Microsoft,Local,23,25,,,no-bill,5,2026-08-13
+documentation-chore,Qwen3 8B,Alibaba,Local,41,50,,,no-bill,10,2026-08-13 – 2026-08-14
+documentation-chore,Qwen3.6 27B (GGUF Q4_K_M build),Alibaba,Local,25,25,,,no-bill,5,2026-08-13
+documentation-chore,Qwen3.8 Max,Alibaba,OpenRouter,21,25,0.2726,0.0130,invoice,5,2026-08-13 – 2026-08-14
+context-ladder,Three frontier Claude models vs a graded context ladder,,,,,12.7071,,invoice,,2026-08-01
+context-ladder,"Compliance-control surfacing arm, authority variant",,,,,4.6920,,invoice,,2026-08-25
+context-ladder,DeepSeek V4 Flash re-run on a pinned route,,,,,0.3976,,invoice,,2026-08-28
+context-ladder,"Compliance-control panel, four non-Opus models plus Opus 5",,,,,11.3862,,invoice+estimate-shared,,2026-08-28
+context-ladder,"Confirmatory replicate, eight-model panel",,,,,38.4090,,invoice+estimate-shared,,2026-08-28

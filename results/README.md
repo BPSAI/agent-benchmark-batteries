@@ -124,3 +124,20 @@ the community rule exists to keep aggregated rates trustworthy, and this
 file explicitly isn't one (see the "What this sample's own numbers show"
 and "counterexample" sections above for what single-round data can and
 can't tell you here).
+
+## `receipts-banked-rows.csv` -- the Receipts tables as data
+
+This file is the machine-readable form of the cost tables on the Error
+Bars Receipts page. Each row is one cell of that page: every row of the
+three per-cut tables (code, review format, documentation chore) and every
+row of the long-context/disclosure ladder, one line each. Columns:
+`cut`, `model`, `lab`, `access`, `completed`, `n`, `spend_usd`,
+`usd_per_completed`, `basis`, `rounds_per_fixture`, `dates`. A completed
+count of `98` out of `n` `100` appears as `completed=98, n=100`; ladder
+rows carry `cut=context-ladder` and leave the per-model columns blank.
+The `basis` column names the class of evidence behind each figure
+(`invoice`, `rate-estimate`, `re-scored`, `withdrawn`, and so on) --
+[`docs/receipts-methods.md`](../docs/receipts-methods.md) defines each one
+and lists every known issue. Empty `spend_usd`/`usd_per_completed` cells
+are rows with no printed figure (a local model with no bill, or a
+withdrawn cell), not zeros.

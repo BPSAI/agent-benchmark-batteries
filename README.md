@@ -21,9 +21,11 @@ docs/
   running-the-battery.md          how to run the fixtures against any model/agent
   drop2-run-conditions.md         how to configure a thinking field-present/field-absent A-B, incl. the adaptive-default trap
   drop2-method-power-math.md      paired/clustered analysis recipe + power math, worked with real numbers
+  receipts-methods.md             where every figure on the Error Bars Receipts page comes from
 results/
   reference-results.csv               raw per-fixture per-model outcome rows
   drop2-thinking-onoff-reference.csv  reference rows for the thinking field-present/field-absent method kit
+  receipts-banked-rows.csv            the Receipts cost tables + context ladder, one row per cell
   README.md                           what those rows are (and aren't)
 governance/
   denylist.txt                the content deny-list
