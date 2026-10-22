@@ -42,10 +42,20 @@ of the reporting table in the kit.
   conversation per completion, `system_prompt` as system and `input_prompt`
   as user. All 30 fixtures, 3 rounds per fixture (one round completed before
   the next began), 90 completions per model, 180 total.
-- Scorer: `tools/score_completion.py` (tests: `tools/test_score_completion.py`),
-  at commit 6962531. The runner used for these rows was an earlier version of
+- Scorer: `tools/score_completion.py` (tests: `tools/test_score_completion.py`).
+  The rows were first scored at commit 6962531, where a fixture constraint
+  that was absent (`min_length` of 0, an empty `must_not_contain`) still
+  counted as a passing check, which could lift a failing completion to
+  `partial`. The scorer in this PR counts only applicable checks. **Re-score
+  note:** all 180 completions were re-scored from their raw files with the
+  corrected scorer: 180 `pass` before, 180 `pass` after, 0 outcomes changed,
+  so the saturation finding below survives the correction. The raw
+  completions are not committed.
+  The runner used for these rows was an earlier version of
   `tools/run_local_battery.py`; the current runner interleaves arms and
-  records requested id, served id, context and sampling in every raw file.
+  records requested id, served id, context, sampling and a run manifest
+  (fixture digests, options, scorer digest) in every raw file, and refuses to
+  resume into a raw set whose manifest differs.
 - No API call was made. Every completion came from a model running locally.
 - Raw completions are not committed; only the five-column rows are.
 

@@ -1,4 +1,5 @@
 """Red-first tests for governance/check_results_shape.py."""
+
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,7 +10,12 @@ HEADER = "model_id,fixture_id,outcome,format_variant,base_task_id\n"
 INDEX = {"b--short": ("b", "short"), "b--embed-neutral": ("b", "embedded-neutral")}
 
 
-def write(directory: Path, name: str, rows: list[str], provenance: str | None = None) -> Path:
+def write(
+    directory: Path,
+    name: str,
+    rows: list[str],
+    provenance: str | None = "repetitions: 1\n",
+) -> Path:
     path = directory / name
     path.write_text(HEADER + "".join(r + "\n" for r in rows))
     if provenance is not None:
@@ -22,14 +28,18 @@ class ShapeTests(unittest.TestCase):
         self.dir = Path(tempfile.mkdtemp())
 
     def test_discovery_globs_csvs_and_skips_excluded_schemas(self):
-        for name in ("a.csv", "drop2-thinking-onoff-reference.csv", "receipts-banked-rows.csv"):
+        for name in (
+            "a.csv",
+            "drop2-thinking-onoff-reference.csv",
+            "receipts-banked-rows.csv",
+        ):
             write(self.dir, name, [])
         found = [p.name for p in crs.discover_files(self.dir)]
         self.assertEqual(found, ["a.csv"])
 
     def test_duplicate_beyond_declared_repetition_fails(self):
         row = "m,b--short,pass,short,b"
-        path = write(self.dir, "x.csv", [row, row])
+        path = write(self.dir, "x.csv", [row, row], provenance="repetitions: 1\n")
         errors, _ = crs.check_file(path, INDEX)
         self.assertTrue(any("duplicate" in e for e in errors))
 
@@ -52,10 +62,51 @@ class ShapeTests(unittest.TestCase):
         self.assertTrue(any("model_id" in e for e in errors))
 
     def test_valid_local_model_ids_pass(self):
-        path = write(self.dir, "x.csv", ["gemma4:31b,b--short,pass,short,b",
-                                         "hf.co/org/m:Q4_K_M,b--short,pass,short,b"])
+        path = write(
+            self.dir,
+            "x.csv",
+            [
+                "gemma4:31b,b--short,pass,short,b",
+                "hf.co/org/m:Q4_K_M,b--short,pass,short,b",
+            ],
+        )
         errors, _ = crs.check_file(path, INDEX)
         self.assertEqual(errors, [])
+
+    def test_missing_provenance_line_is_refused_not_defaulted(self):
+        path = write(self.dir, "x.csv", ["m,b--short,pass,short,b"], provenance=None)
+        errors, _ = crs.check_file(path, INDEX)
+        self.assertTrue(any("repetitions" in e for e in errors))
+        path2 = write(
+            self.dir, "y.csv", ["m,b--short,pass,short,b"], provenance="no line here\n"
+        )
+        errors, _ = crs.check_file(path2, INDEX)
+        self.assertTrue(any("repetitions" in e for e in errors))
+
+    def test_declared_value_above_cap_is_refused(self):
+        row = "m,b--short,pass,short,b"
+        path = write(self.dir, "x.csv", [row], provenance="repetitions: 9999\n")
+        errors, _ = crs.check_file(path, INDEX)
+        self.assertTrue(any("cap" in e for e in errors))
+
+    def test_every_cell_must_carry_exactly_the_declared_n(self):
+        rows = ["m,b--short,pass,short,b"] * 3 + [
+            "m,b--embed-neutral,pass,embedded-neutral,b"
+        ] * 2
+        path = write(self.dir, "x.csv", rows, provenance="repetitions: 3\n")
+        errors, _ = crs.check_file(path, INDEX)
+        self.assertTrue(any("exactly" in e and "b--embed-neutral" in e for e in errors))
+
+    def test_trailing_newline_in_model_id_is_rejected(self):
+        row = {
+            "model_id": "m\n",
+            "fixture_id": "b--short",
+            "outcome": "pass",
+            "format_variant": "short",
+            "base_task_id": "b",
+        }
+        self.assertIsNotNone(crs.check_row(row, INDEX))
+        self.assertIsNone(crs.check_row(dict(row, model_id="m"), INDEX))
 
 
 if __name__ == "__main__":

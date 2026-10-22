@@ -162,7 +162,8 @@ at its own model's default sampling, and those defaults differ; and the
 served model id was never captured. Do not compare the two arms from this
 file.
 
-**What it shows.** Every one of the 180 rows is `pass`: the battery did not
+**What it shows.** Every one of the 180 rows is `pass` (re-scored from the raw completions
+with the corrected scorer; no outcome changed): the battery did not
 separate the two arms. That is a finding about the fixtures' discriminating
 power under the substring/shape scorer, not about either model. There is no
 interval to compute and no direction to claim.
@@ -180,9 +181,10 @@ not included, and no mapping was invented.
 `results/*.csv` except the two files with a different schema
 (`drop2-thinking-onoff-reference.csv`, `receipts-banked-rows.csv`). It fails
 a wrong header, an unknown outcome or variant, a fixture id or metadata
-mismatch, a `model_id` that is not a plain identifier, and a
-`(model_id, fixture_id)` repeated more often than the file's declared
-`repetitions: N` (default 1). It prints n per cell.
+mismatch, and a `model_id` that is not a plain identifier. Every file needs a
+sibling `<name>.PROVENANCE.md` with a `repetitions: N` line (1 to 10, no
+default), and every `(model_id, fixture_id)` must appear exactly N times. It
+prints n per cell.
 
 **Reminder, unchanged:** no per-cell rate from this file, or from any file
 here, until a given `(model_id, base_task_id, format_variant)` cell has n >=
