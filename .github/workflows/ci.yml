@@ -22,3 +22,6 @@ jobs:
 
       - name: Denylist content scan
         run: python3 governance/check_denylist.py
+
+      - name: Results files are the five-column shape
+        run: python3 governance/check_results_shape.py

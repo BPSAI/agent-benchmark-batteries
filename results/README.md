@@ -141,3 +141,38 @@ The `basis` column names the class of evidence behind each figure
 and lists every known issue. Empty `spend_usd`/`usd_per_completed` cells
 are rows with no printed figure (a local model with no bill, or a
 withdrawn cell), not zeros.
+
+## `drop3-within-run-reference.csv` -- the within-run reference file
+
+This is the reference-rows file for the within-run method kit in
+[`docs/within-run-comparison.md`](../docs/within-run-comparison.md). It
+carries exactly the five columns the top of this README prescribes
+(`model_id`, `fixture_id`, `outcome`, `format_variant`, `base_task_id`), raw
+per-fixture per-model rows, no aggregated rates, and no cost or token
+columns. A CI check (`governance/check_results_shape.py`) fails any row
+whose header, outcome, format variant, fixture id or base task disagrees
+with the fixtures under `fixtures/`.
+
+**Current contents: the header and 0 rows. n per cell: none.** The runs
+this drop was built from (a three-arm run of Sonnet 5.5, Sonnet 5 and
+Haiku 4.5, five rounds per fixture, and a separate GPT 6.1 Sol run, five
+rounds per fixture, all dispatched 2026-09-29) used the maintainers' own
+production fixture set, not the 30 fixtures in this repo. None of those
+rows map to this repo's shape:
+
+- Their `fixture_id` values are not files under `fixtures/`, so there is no
+  fixture here for any row to point at.
+- Those fixtures have no matched-pairs variant structure, so there is no
+  honest `format_variant` or `base_task_id` to put in the other two columns.
+
+Padding the file with rows from a different instrument, or inventing a
+mapping from one fixture set to the other, would put numbers here that no
+one could reproduce from this repo. So the file ships empty, with its
+schema enforced, until a run against these 30 fixtures exists. The
+[method kit](../docs/within-run-comparison.md) is complete without it: it
+describes the method and carries the reproduction steps, and the rows are
+what you generate by following them.
+
+**Reminder, unchanged:** no per-cell rate from this file, or from any file
+here, until a given `(model_id, base_task_id, format_variant)` cell has n >=
+3 rows. When rows land in this file, the PR states n per cell.
