@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import re
 
-from shape_rules import min_length_of
+from shape_rules import min_length_of, nonempty
 
 DECLINE = re.compile(
     r"^\W*(i\s+(can'?t|cannot|can not|won'?t|am unable to|'m unable to|'m sorry)|"
@@ -30,24 +30,27 @@ def _checks(text: str, shape: dict) -> list[bool]:
         checks.append(bool(CODE_HINT.search(text)))
     if min_length_of(shape) > 0:
         checks.append(len(text) >= min_length_of(shape))
-    checks.extend(s in text for s in shape.get("must_contain", []))
-    if shape.get("must_not_contain"):
-        checks.append(not any(s in text for s in shape["must_not_contain"]))
-    checks.extend(s.lower() in text.lower() for s in shape.get("required_sections", []))
-    checks.extend(k in text for k in shape.get("json_schema_keys", []))
+    checks.extend(s in text for s in nonempty(shape, "must_contain"))
+    forbidden = nonempty(shape, "must_not_contain")
+    if forbidden:
+        checks.append(not any(s in text for s in forbidden))
+    checks.extend(
+        s.lower() in text.lower() for s in nonempty(shape, "required_sections")
+    )
+    checks.extend(k in text for k in nonempty(shape, "json_schema_keys"))
     return checks
 
 
 def score(completion: str, shape: dict) -> str:
     text = completion or ""
+    checks = _checks(text, shape)
+    if not checks:  # a fixture defect, reported before any completion judgment
+        return "invalid-fixture"
     stripped = text.strip()
     if len(stripped) < 20 or (
         DECLINE.match(stripped) and not CODE_HINT.search(stripped)
     ):
         return "refused"
-    checks = _checks(text, shape)
-    if not checks:
-        return "invalid-fixture"
     if all(checks):
         return "pass"
     return "partial" if sum(checks) * 2 >= len(checks) else "fail"

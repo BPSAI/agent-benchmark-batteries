@@ -17,15 +17,21 @@ def min_length_of(shape: dict) -> int:
         ) from exc
 
 
+def nonempty(shape: dict, key: str) -> list[str]:
+    """The constraint list's non-blank strings; blanks constrain nothing."""
+    return [x for x in (shape.get(key) or []) if isinstance(x, str) and x.strip()]
+
+
 def has_applicable_check(shape: object) -> bool:
     """True when the shape constrains at least one thing (else scoring is vacuous)."""
     if not isinstance(shape, dict):
         return False
+    min_len = min_length_of(shape)  # always validated, never short-circuited
     return bool(
         shape.get("produces_code")
-        or min_length_of(shape) > 0
-        or shape.get("must_contain")
-        or shape.get("must_not_contain")
-        or shape.get("required_sections")
-        or shape.get("json_schema_keys")
+        or min_len > 0
+        or nonempty(shape, "must_contain")
+        or nonempty(shape, "must_not_contain")
+        or nonempty(shape, "required_sections")
+        or nonempty(shape, "json_schema_keys")
     )

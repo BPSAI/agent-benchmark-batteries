@@ -153,6 +153,30 @@ class ShapeTests(unittest.TestCase):
         self.assertIn("a--short", index)
         self.assertTrue(any("broken.json" in p for p in problems))
 
+    def test_repetitions_number_on_the_next_line_is_not_accepted(self):
+        path = write(
+            self.dir,
+            "x.csv",
+            ["m,b--short,pass,short,b"],
+            provenance="repetitions:\n1\n",
+        )
+        errors, _ = crs.check_file(path, INDEX1)
+        self.assertTrue(any("repetitions" in e for e in errors))
+
+    def test_duplicate_fixture_ids_are_refused_naming_both_files(self):
+        fx = self.dir / "fx2"
+        fx.mkdir()
+        body = json.dumps(
+            {
+                "id": "a--short",
+                "metadata": {"base_task_id": "a", "format_variant": "short"},
+            }
+        )
+        (fx / "one.json").write_text(body)
+        (fx / "two.json").write_text(body)
+        _, problems = crs.load_fixture_index(fx)
+        self.assertTrue(any("one.json" in p and "two.json" in p for p in problems))
+
 
 if __name__ == "__main__":
     unittest.main()

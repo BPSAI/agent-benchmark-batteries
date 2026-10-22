@@ -83,6 +83,28 @@ class ScoreTests(unittest.TestCase):
             score("a perfectly fine long completion text", shape), "invalid-fixture"
         )
 
+    def test_invalid_fixture_is_reported_even_for_an_empty_completion(self):
+        shape = {
+            "produces_code": False,
+            "min_length": 0,
+            "must_contain": [],
+            "must_not_contain": [],
+            "required_sections": [],
+            "json_schema_keys": [],
+        }
+        self.assertEqual(score("", shape), "invalid-fixture")
+
+    def test_empty_string_constraint_does_not_count_as_a_check(self):
+        shape = {
+            "produces_code": False,
+            "min_length": 0,
+            "must_contain": [""],
+            "must_not_contain": [],
+            "required_sections": [],
+            "json_schema_keys": [],
+        }
+        self.assertEqual(score("a long enough completion", shape), "invalid-fixture")
+
     def test_refused_explicit(self):
         self.assertEqual(score("I can't help with that request.", SHAPE), "refused")
 

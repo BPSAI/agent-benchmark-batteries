@@ -36,6 +36,20 @@ class ShapeRulesTests(unittest.TestCase):
     def test_non_dict_shape_is_not_applicable(self):
         self.assertFalse(sr.has_applicable_check(None))
 
+    def test_malformed_min_length_raises_even_when_produces_code_is_true(self):
+        with self.assertRaises(ValueError):
+            sr.has_applicable_check(dict(EMPTY, produces_code=True, min_length="lots"))
+
+    def test_lists_of_only_empty_strings_are_not_applicable(self):
+        for key in (
+            "must_contain",
+            "must_not_contain",
+            "required_sections",
+            "json_schema_keys",
+        ):
+            self.assertFalse(sr.has_applicable_check(dict(EMPTY, **{key: [""]})), key)
+            self.assertFalse(sr.has_applicable_check(dict(EMPTY, **{key: ["  "]})), key)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -32,7 +32,7 @@ OUTCOMES = {"pass", "partial", "fail", "refused"}
 VARIANTS = {"short", "embedded-neutral", "embedded-production"}
 MODEL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*\Z")
 MAX_REPETITIONS = 10
-REPETITIONS = re.compile(r"^repetitions:\s*(\d+)\s*$", re.M)
+REPETITIONS = re.compile(r"^repetitions:[ \t]*(\d+)[ \t]*$", re.M)
 
 
 def load_fixture_index(
@@ -41,10 +41,18 @@ def load_fixture_index(
     """(fixture id -> (base_task_id, format_variant), problems); bad files are reported."""
     index: dict[str, tuple[str, str]] = {}
     problems: list[str] = []
+    owner: dict[str, str] = {}
     for path in sorted(fixtures_dir.rglob("*.json")):
         try:
             data = json.loads(path.read_text())
             meta = data.get("metadata", {})
+            if data["id"] in index:
+                problems.append(
+                    f"duplicate fixture id {data['id']!r} in {owner[data['id']]} "
+                    f"and {path.name}"
+                )
+                continue
+            owner[data["id"]] = path.name
             index[data["id"]] = (meta.get("base_task_id"), meta.get("format_variant"))
         except (OSError, ValueError, KeyError, AttributeError) as exc:
             problems.append(f"{path.name}: unreadable fixture ({exc!r})")
