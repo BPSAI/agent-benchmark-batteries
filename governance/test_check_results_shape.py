@@ -1,5 +1,6 @@
 """Red-first tests for governance/check_results_shape.py."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -117,6 +118,40 @@ class ShapeTests(unittest.TestCase):
         }
         self.assertIsNotNone(crs.check_row(row, INDEX))
         self.assertIsNone(crs.check_row(dict(row, model_id="m"), INDEX))
+
+    def test_header_only_file_is_refused(self):
+        path = write(self.dir, "x.csv", [], provenance="repetitions: 1\n")
+        errors, _ = crs.check_file(path, INDEX1)
+        self.assertTrue(any("no rows" in e for e in errors))
+
+    def test_one_bad_file_does_not_stop_the_others(self):
+        good = write(
+            self.dir,
+            "good.csv",
+            ["m,b--short,pass,short,b"],
+            provenance="repetitions: 1\n",
+        )
+        bad = self.dir / "bad.csv"
+        bad.write_text("not,the,header\n")
+        errors = crs.check_all([bad, good], INDEX1)
+        self.assertTrue(any("bad.csv" in e for e in errors))
+        self.assertFalse(any("good.csv" in e for e in errors))
+
+    def test_malformed_fixture_is_reported_and_indexing_continues(self):
+        fx = self.dir / "fx"
+        fx.mkdir()
+        (fx / "broken.json").write_text("{not json")
+        (fx / "ok.json").write_text(
+            json.dumps(
+                {
+                    "id": "a--short",
+                    "metadata": {"base_task_id": "a", "format_variant": "short"},
+                }
+            )
+        )
+        index, problems = crs.load_fixture_index(fx)
+        self.assertIn("a--short", index)
+        self.assertTrue(any("broken.json" in p for p in problems))
 
 
 if __name__ == "__main__":

@@ -35,14 +35,20 @@ MAX_REPETITIONS = 10
 REPETITIONS = re.compile(r"^repetitions:\s*(\d+)\s*$", re.M)
 
 
-def load_fixture_index(fixtures_dir: Path) -> dict[str, tuple[str, str]]:
-    """fixture id -> (base_task_id, format_variant), from fixture metadata."""
+def load_fixture_index(
+    fixtures_dir: Path,
+) -> tuple[dict[str, tuple[str, str]], list[str]]:
+    """(fixture id -> (base_task_id, format_variant), problems); bad files are reported."""
     index: dict[str, tuple[str, str]] = {}
+    problems: list[str] = []
     for path in sorted(fixtures_dir.rglob("*.json")):
-        data = json.loads(path.read_text())
-        meta = data.get("metadata", {})
-        index[data["id"]] = (meta.get("base_task_id"), meta.get("format_variant"))
-    return index
+        try:
+            data = json.loads(path.read_text())
+            meta = data.get("metadata", {})
+            index[data["id"]] = (meta.get("base_task_id"), meta.get("format_variant"))
+        except (OSError, ValueError, KeyError, AttributeError) as exc:
+            problems.append(f"{path.name}: unreadable fixture ({exc!r})")
+    return index, problems
 
 
 def check_row(row: dict, index: dict[str, tuple[str, str]]) -> str | None:
@@ -124,6 +130,8 @@ def check_file(
                 f"{path.name}: every cell must carry exactly {limit} rows; "
                 f"({model}, {fid}) has {n}"
             )
+    if not per_fixture and not errors:
+        errors.append(f"{path.name}: no rows (a results file must carry data)")
     for model in sorted({m for m, _ in per_fixture}):
         for fid in sorted(index):
             if (model, fid) not in per_fixture:
@@ -134,18 +142,27 @@ def check_file(
     return errors, cells
 
 
-def main() -> int:
-    index = load_fixture_index(FIXTURES_DIR)
+def check_all(files: list[Path], index: dict[str, tuple[str, str]]) -> list[str]:
+    """Check every file; a failure in one never stops the rest."""
     all_errors: list[str] = []
-    for path in discover_files(RESULTS_DIR):
-        name = path.name
-        errors, cells = check_file(path, index)
+    for path in files:
+        try:
+            errors, cells = check_file(path, index)
+        except Exception as exc:  # report per file and continue
+            all_errors.append(f"{path.name}: could not be checked ({exc!r})")
+            continue
         all_errors.extend(errors)
         print(
-            f"{name}: {sum(cells.values())} rows in {len(cells)} cells "
+            f"{path.name}: {sum(cells.values())} rows in {len(cells)} cells "
             f"(max n per cell: {max(cells.values(), default=0)}, "
             f"declared repetitions: {declared_repetitions(path)})"
         )
+    return all_errors
+
+
+def main() -> int:
+    index, problems = load_fixture_index(FIXTURES_DIR)
+    all_errors = problems + check_all(discover_files(RESULTS_DIR), index)
     if all_errors:
         print("Results shape check FAILED:", file=sys.stderr)
         for err in all_errors:

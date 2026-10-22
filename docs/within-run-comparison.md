@@ -274,8 +274,18 @@ def fixture_rate(model):
             acc[(r["base_task_id"], r["fixture_id"])].append(r["outcome"] == "pass")
     return {k: sum(v) / len(v) for k, v in acc.items()}
 
-def paired_cluster_delta(model_a, model_b):
+def paired_cluster_delta(model_a, model_b, expected):
+    """expected: the (base_task_id, fixture_id) keys of the WHOLE battery."""
     a, b = fixture_rate(model_a), fixture_rate(model_b)
+    for model, got in ((model_a, a), (model_b, b)):
+        if got.keys() != set(expected):  # both arms omitting a fixture is still incomplete
+            raise ValueError(f"{model} does not cover the whole battery: "
+                             f"missing {sorted(set(expected) - got.keys())}")
+    reps = {m: {k: sum(1 for r in rows if r["model_id"] == m and
+                      (r["base_task_id"], r["fixture_id"]) == k) for k in expected}
+            for m in (model_a, model_b)}
+    if len({n for per in reps.values() for n in per.values()}) != 1:
+        raise ValueError("unequal repetition counts across fixtures or arms")
     if a.keys() != b.keys():  # never silently intersect: that is a different battery
         raise ValueError(
             f"arms scored on different fixtures; dropped for {model_a}: "

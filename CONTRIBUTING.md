@@ -31,14 +31,34 @@ comments, or structure from the source.
 
 ## Submitting results
 
-Add your rows to `results/reference-results.csv` (see that file's header
-for the exact columns) or open a PR adding a new file under `results/` if
-you'd rather keep your submission separate. Only these columns are
-accepted: `model_id`, `fixture_id`, `outcome`, `format_variant`,
-`base_task_id`. CI (`governance/check_results_shape.py`) enforces the header
-and the values on the repo's five-column results files. Do not include prompts beyond what's already in
-`fixtures/`, and do not include telemetry, cost data, or infrastructure
-detail from your own run environment.
+Add your rows as a NEW file under `results/` (or to
+`results/reference-results.csv` if it fits its single-run shape). Rules CI
+enforces on every `results/*.csv` (except `drop2-thinking-onoff-reference.csv`
+and `receipts-banked-rows.csv`):
+
+- Exactly these five columns, in this order: `model_id`, `fixture_id`,
+  `outcome`, `format_variant`, `base_task_id`. `outcome` is `pass`, `partial`,
+  `fail` or `refused`. Copy `format_variant` and `base_task_id` from the
+  fixture file's own `metadata` (see `results/README.md`).
+- `model_id` is a plain identifier (letters, digits, `. _ : / -`, starting
+  with a letter or digit).
+- A sibling `results/<name>.PROVENANCE.md` containing a line
+  `repetitions: N` (N from 1 to 10). Every model in the file must cover
+  **every** fixture with **exactly** N rows, and the file must not be empty.
+- No prompts beyond what is in `fixtures/`, and no telemetry, cost data or
+  infrastructure detail from your run environment.
+- A fixture whose `expected_shape` has no applicable check is a fixture defect:
+  the scorer returns `invalid-fixture` and the stamp check refuses it.
+
+Run exactly what CI runs, from the repo root, before opening the PR:
+
+```
+python3 governance/check_fixture_stamps.py
+python3 governance/check_denylist.py
+python3 governance/check_results_shape.py
+python3 -m unittest discover -s governance -p "test_*.py"
+python3 -m unittest discover -s tools -p "test_*.py"
+```
 
 Report `n` (how many times you ran each cell) in your PR description --
 see [`docs/running-the-battery.md`](docs/running-the-battery.md) for why

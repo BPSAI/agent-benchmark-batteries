@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import re
 
+from shape_rules import min_length_of
+
 DECLINE = re.compile(
     r"^\W*(i\s+(can'?t|cannot|can not|won'?t|am unable to|'m unable to|'m sorry)|"
     r"sorry|i'm sorry|unable to)",
@@ -26,8 +28,8 @@ def _checks(text: str, shape: dict) -> list[bool]:
     checks: list[bool] = []
     if shape.get("produces_code"):
         checks.append(bool(CODE_HINT.search(text)))
-    if int(shape.get("min_length") or 0) > 0:
-        checks.append(len(text) >= int(shape["min_length"]))
+    if min_length_of(shape) > 0:
+        checks.append(len(text) >= min_length_of(shape))
     checks.extend(s in text for s in shape.get("must_contain", []))
     if shape.get("must_not_contain"):
         checks.append(not any(s in text for s in shape["must_not_contain"]))

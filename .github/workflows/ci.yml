@@ -29,5 +29,5 @@ jobs:
       - name: Governance check tests
         run: python3 -m unittest discover -s governance -p "test_*.py"
 
-      - name: Scorer and runner tests
+      - name: Scorer and shared-rule tests
         run: python3 -m unittest discover -s tools -p "test_*.py"

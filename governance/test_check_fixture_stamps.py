@@ -40,6 +40,20 @@ class ApplicableCheckTests(unittest.TestCase):
         }
         self.assertIsNone(cfs.check_stamp(fixture(shape)))
 
+    def test_malformed_min_length_is_a_named_fixture_error_not_a_crash(self):
+        shape = {
+            "produces_code": False,
+            "min_length": "lots",
+            "must_contain": ["a"],
+            "must_not_contain": [],
+            "required_sections": [],
+            "json_schema_keys": [],
+        }
+        path = fixture(shape)
+        err = cfs.check_stamp(path)
+        self.assertIn(str(path), err)
+        self.assertIn("min_length", err)
+
 
 if __name__ == "__main__":
     unittest.main()

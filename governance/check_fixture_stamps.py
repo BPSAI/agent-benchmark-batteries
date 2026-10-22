@@ -13,6 +13,9 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+from shape_rules import has_applicable_check  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = REPO_ROOT / "fixtures"
 
@@ -22,20 +25,6 @@ REQUIRED_PROVENANCE = "original-authored"
 def find_fixture_files(fixtures_dir: Path) -> list[Path]:
     """All *.json files under fixtures_dir, sorted for stable output."""
     return sorted(fixtures_dir.rglob("*.json"))
-
-
-def has_applicable_check(shape: object) -> bool:
-    """True when expected_shape constrains at least one thing (else scoring is vacuous)."""
-    if not isinstance(shape, dict):
-        return False
-    return bool(
-        shape.get("produces_code")
-        or int(shape.get("min_length") or 0) > 0
-        or shape.get("must_contain")
-        or shape.get("must_not_contain")
-        or shape.get("required_sections")
-        or shape.get("json_schema_keys")
-    )
 
 
 def check_stamp(path: Path) -> str | None:
@@ -58,7 +47,11 @@ def check_stamp(path: Path) -> str | None:
             f"{REQUIRED_PROVENANCE!r}, got {metadata.get('provenance')!r}"
         )
 
-    if not has_applicable_check(data.get("expected_shape")):
+    try:
+        applicable = has_applicable_check(data.get("expected_shape"))
+    except ValueError as exc:
+        return f"{path}: expected_shape is malformed ({exc})"
+    if not applicable:
         return f"{path}: expected_shape has no applicable check (vacuous fixture)"
 
     return None

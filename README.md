@@ -37,7 +37,7 @@ governance/
   check_denylist.py           CI: scans every file against it
   check_fixture_stamps.py     CI: every fixture must carry its provenance stamp
   check_results_shape.py      CI: the five-column results files keep exactly that shape
-.github/workflows/ci.yml      runs the three governance checks on every push/PR
+.github/workflows/ci.yml      runs the governance checks and unit tests on every push/PR
 ```
 
 Start with [`fixtures/README.md`](fixtures/README.md) for the matched-pairs
@@ -46,12 +46,12 @@ to run it yourself.
 
 ## CI checks
 
-CI runs three checks on every push: a generic-pattern content scan
-(`governance/check_denylist.py`), fixture provenance-stamp
-verification (`governance/check_fixture_stamps.py`), and a shape check on
-the five-column results files (`governance/check_results_shape.py`), plus
-the scorer and runner unit tests.
-Contributor PRs must pass all three.
+CI runs on every push and PR: a generic-pattern content scan
+(`governance/check_denylist.py`), fixture provenance-stamp and
+applicable-check verification (`governance/check_fixture_stamps.py`), a shape
+check on the results files (`governance/check_results_shape.py`), and the
+unit tests under `governance/` and `tools/`. Contributor PRs must pass all of
+them; run them locally first (see `CONTRIBUTING.md`).
 
 ## License
 
