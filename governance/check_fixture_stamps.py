@@ -6,6 +6,7 @@ metadata.public_release == true or metadata.provenance == "original-authored".
 This is the mechanical backstop for the repo's core governance promise: a
 fixture cannot land here without an explicit, checked provenance claim.
 """
+
 from __future__ import annotations
 
 import json
@@ -21,6 +22,20 @@ REQUIRED_PROVENANCE = "original-authored"
 def find_fixture_files(fixtures_dir: Path) -> list[Path]:
     """All *.json files under fixtures_dir, sorted for stable output."""
     return sorted(fixtures_dir.rglob("*.json"))
+
+
+def has_applicable_check(shape: object) -> bool:
+    """True when expected_shape constrains at least one thing (else scoring is vacuous)."""
+    if not isinstance(shape, dict):
+        return False
+    return bool(
+        shape.get("produces_code")
+        or int(shape.get("min_length") or 0) > 0
+        or shape.get("must_contain")
+        or shape.get("must_not_contain")
+        or shape.get("required_sections")
+        or shape.get("json_schema_keys")
+    )
 
 
 def check_stamp(path: Path) -> str | None:
@@ -42,6 +57,9 @@ def check_stamp(path: Path) -> str | None:
             f"{path}: metadata.provenance must be "
             f"{REQUIRED_PROVENANCE!r}, got {metadata.get('provenance')!r}"
         )
+
+    if not has_applicable_check(data.get("expected_shape")):
+        return f"{path}: expected_shape has no applicable check (vacuous fixture)"
 
     return None
 

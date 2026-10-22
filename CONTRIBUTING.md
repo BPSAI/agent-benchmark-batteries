@@ -35,7 +35,8 @@ Add your rows to `results/reference-results.csv` (see that file's header
 for the exact columns) or open a PR adding a new file under `results/` if
 you'd rather keep your submission separate. Only these columns are
 accepted: `model_id`, `fixture_id`, `outcome`, `format_variant`,
-`base_task_id`. Do not include prompts beyond what's already in
+`base_task_id`. CI (`governance/check_results_shape.py`) enforces the header
+and the values on the repo's five-column results files. Do not include prompts beyond what's already in
 `fixtures/`, and do not include telemetry, cost data, or infrastructure
 detail from your own run environment.
 

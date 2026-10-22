@@ -6,6 +6,7 @@ and blank lines ignored). Matching is case-insensitive. Every tracked
 file is scanned against every pattern, with no exemptions -- including
 this script and the pattern file itself.
 """
+
 from __future__ import annotations
 
 import re
@@ -52,7 +53,9 @@ def scan_file(path: Path, patterns: list[str]) -> list[str]:
         regex = re.compile(pattern, re.IGNORECASE)
         for lineno, line in enumerate(text.splitlines(), start=1):
             if regex.search(line):
-                violations.append(f"{rel_path}:{lineno}: matched /{pattern}/ -- {line.strip()!r}")
+                violations.append(
+                    f"{rel_path}:{lineno}: matched /{pattern}/ -- {line.strip()!r}"
+                )
     return violations
 
 

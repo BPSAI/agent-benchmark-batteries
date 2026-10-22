@@ -22,3 +22,12 @@ jobs:
 
       - name: Denylist content scan
         run: python3 governance/check_denylist.py
+
+      - name: Results files are the five-column shape
+        run: python3 governance/check_results_shape.py
+
+      - name: Governance check tests
+        run: python3 -m unittest discover -s governance -p "test_*.py"
+
+      - name: Scorer and runner tests
+        run: python3 -m unittest discover -s tools -p "test_*.py"

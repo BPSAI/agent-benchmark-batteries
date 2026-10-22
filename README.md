@@ -22,16 +22,23 @@ docs/
   drop2-run-conditions.md         how to configure a thinking field-present/field-absent A-B, incl. the adaptive-default trap
   drop2-method-power-math.md      paired/clustered analysis recipe + power math, worked with real numbers
   receipts-methods.md             where every figure on the Error Bars Receipts page comes from
+  within-run-comparison.md        Drop 3 method kit: comparing two or more models in one run, with a sibling control
 results/
   reference-results.csv               raw per-fixture per-model outcome rows
   drop2-thinking-onoff-reference.csv  reference rows for the thinking field-present/field-absent method kit
+  drop3-local-protocol-demo.csv       Drop 3 protocol demonstration: 180 rows, 60 cells, n=3, two local arms; NOT a within-run comparison (see its provenance)
   receipts-banked-rows.csv            the Receipts cost tables + context ladder, one row per cell
   README.md                           what those rows are (and aren't)
+tools/
+  score_completion.py         substring/shape scorer for the fixtures' expected_shape
+  run_local_battery.py        local-Ollama runner: interleaved arms, atomic raw files, served-model capture
+  test_*.py                   unit tests for the scorer (run in CI)
 governance/
   denylist.txt                the content deny-list
   check_denylist.py           CI: scans every file against it
   check_fixture_stamps.py     CI: every fixture must carry its provenance stamp
-.github/workflows/ci.yml      runs both governance checks on every push/PR
+  check_results_shape.py      CI: the five-column results files keep exactly that shape
+.github/workflows/ci.yml      runs the three governance checks on every push/PR
 ```
 
 Start with [`fixtures/README.md`](fixtures/README.md) for the matched-pairs
@@ -40,10 +47,12 @@ to run it yourself.
 
 ## CI checks
 
-CI runs two checks on every push: a generic-pattern content scan
-(`governance/check_denylist.py`) and fixture provenance-stamp
-verification (`governance/check_fixture_stamps.py`). Contributor PRs
-must pass both.
+CI runs three checks on every push: a generic-pattern content scan
+(`governance/check_denylist.py`), fixture provenance-stamp
+verification (`governance/check_fixture_stamps.py`), and a shape check on
+the five-column results files (`governance/check_results_shape.py`), plus
+the scorer and runner unit tests.
+Contributor PRs must pass all three.
 
 ## License
 
