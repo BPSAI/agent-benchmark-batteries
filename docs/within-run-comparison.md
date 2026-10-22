@@ -139,7 +139,9 @@ Any one of these, and the comparison goes back to rows with no claim:
   mattered once. Without one, you do not know.
 - **Different cuts.** Arms scored on different fixture subsets, or a cut
   where one arm lost rows (a timeout, a cap, a refusal handled differently)
-  and the others did not. Compare on the intersection and say so.
+  and the others did not. Do not compare on the intersection: list the
+  dropped fixtures per arm and refuse the comparison until every arm is scored
+  on the same fixtures.
 - **A different effort or thinking shape.** One arm with the reasoning field
   present and another with it absent is a different condition, whatever you
   call the arms. And omitting the field is not the same as turning it off
@@ -207,15 +209,26 @@ n per cell matched. Had any one of those differed, the same pair of runs
 would be a cross-run comparison and the first correction would be to
 re-dispatch it inside one run with the others.
 
-One more limit belongs next to the example. Both runs used the maintainers'
-own production fixture set, which is not the 30 fixtures in this repo and
-has no matched-pairs variant structure. This repo's
-[`results/drop3-within-run-reference.csv`](../results/drop3-within-run-reference.csv)
-therefore carries the five-column header and no rows yet: none of those
-rows map to a fixture here, and the repo does not invent a mapping. The
-reasoning is in [`results/README.md`](../results/README.md). The method in
-this kit does not depend on which fixtures you use. Point it at this repo's
-30 and you have a file that fits.
+The production fixture set those runs used is not the 30 fixtures in this
+repo and has no matched-pairs variant structure, so none of their rows map
+to this repo's shape, and the repo does not invent a mapping.
+
+**A protocol demonstration, and the worked counter-example.**
+[`results/drop3-local-protocol-demo.csv`](../results/drop3-local-protocol-demo.csv)
+holds 180 rows (60 cells, n = 3, two local arms, this repo's 30 fixtures, no
+API spend). It shows the protocol and the five-column shape working end to
+end. It is **not** a within-run comparison and no reference comparison is
+claimed from it, because it broke the rules on this page in four ways: arm A
+ran to completion before arm B started (not interleaved by round, so model
+and run order are confounded); the server-side context differed between the
+arms (32768 versus 16384 tokens); each arm ran at its own model's default
+sampling, and those defaults differ; and the served model id was never
+captured, so requested-versus-served was never checked. Every one of the 180
+rows is `pass`, so the battery did not separate the arms. That is a finding
+about the fixtures' discriminating power under the substring scorer, not about
+either model, and it is the saturated-set row of the reporting table: no
+interval, no direction. The provenance file beside the CSV lists the same
+points. Use it as the example of what to fix before you trust your own run.
 
 ## Reproduce it against your own agents
 
@@ -263,8 +276,13 @@ def fixture_rate(model):
 
 def paired_cluster_delta(model_a, model_b):
     a, b = fixture_rate(model_a), fixture_rate(model_b)
+    if a.keys() != b.keys():  # never silently intersect: that is a different battery
+        raise ValueError(
+            f"arms scored on different fixtures; dropped for {model_a}: "
+            f"{sorted(b.keys() - a.keys())}, dropped for {model_b}: "
+            f"{sorted(a.keys() - b.keys())}. Refusing the comparison.")
     clusters = defaultdict(list)
-    for key in a.keys() & b.keys():
+    for key in a.keys():
         clusters[key[0]].append(a[key] - b[key])
     d = [mean(v) for v in clusters.values()]  # one number per base task
     k = len(d)

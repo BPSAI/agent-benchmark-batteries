@@ -26,9 +26,13 @@ docs/
 results/
   reference-results.csv               raw per-fixture per-model outcome rows
   drop2-thinking-onoff-reference.csv  reference rows for the thinking field-present/field-absent method kit
-  drop3-within-run-reference.csv      Drop 3 reference file (five-column shape; no rows yet, see its README section)
+  drop3-local-protocol-demo.csv       Drop 3 protocol demonstration: 180 rows, 60 cells, n=3, two local arms; NOT a within-run comparison (see its provenance)
   receipts-banked-rows.csv            the Receipts cost tables + context ladder, one row per cell
   README.md                           what those rows are (and aren't)
+tools/
+  score_completion.py         substring/shape scorer for the fixtures' expected_shape
+  run_local_battery.py        local-Ollama runner: interleaved arms, atomic raw files, served-model capture
+  test_*.py                   unit tests for both (run in CI)
 governance/
   denylist.txt                the content deny-list
   check_denylist.py           CI: scans every file against it
@@ -46,7 +50,8 @@ to run it yourself.
 CI runs three checks on every push: a generic-pattern content scan
 (`governance/check_denylist.py`), fixture provenance-stamp
 verification (`governance/check_fixture_stamps.py`), and a shape check on
-the five-column results files (`governance/check_results_shape.py`).
+the five-column results files (`governance/check_results_shape.py`), plus
+the scorer and runner unit tests.
 Contributor PRs must pass all three.
 
 ## License
