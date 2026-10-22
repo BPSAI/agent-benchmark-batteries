@@ -176,3 +176,33 @@ what you generate by following them.
 **Reminder, unchanged:** no per-cell rate from this file, or from any file
 here, until a given `(model_id, base_task_id, format_variant)` cell has n >=
 3 rows. When rows land in this file, the PR states n per cell.
+
+### Deriving `format_variant` and `base_task_id` from `fixtures/`
+
+Both columns come from the fixture file itself, never from the fixture id's
+suffix and never by guessing. For each row, open the fixture whose `id`
+equals the row's `fixture_id` (files live under `fixtures/<task_type>/`) and
+copy two fields from its `metadata` object:
+
+- `base_task_id` <- `metadata.base_task_id`
+- `format_variant` <- `metadata.format_variant`
+
+The id suffix is not the variant name: a fixture id ending `--embed-prod`
+has `format_variant` `embedded-production`, and `--embed-neutral` has
+`embedded-neutral`. Copy the metadata value. A few lines of Python do it:
+
+```python
+import json, pathlib
+index = {}
+for path in pathlib.Path("fixtures").rglob("*.json"):
+    fx = json.loads(path.read_text())
+    index[fx["id"]] = (fx["metadata"]["base_task_id"], fx["metadata"]["format_variant"])
+base_task_id, format_variant = index[fixture_id]
+```
+
+`governance/check_results_shape.py` re-derives both values the same way and
+fails any row that disagrees. It accepts any non-empty `model_id`, so local
+models are welcome (for example two local model ids run together in one
+within-run run); `drop3-within-run-reference.csv` stays header-only until
+rows from such a run, with all 30 public fixtures and n >= 3 per cell,
+are added.

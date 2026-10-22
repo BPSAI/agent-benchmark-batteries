@@ -20,8 +20,9 @@ for the paired, clustered analysis recipe this page reuses.
 4. [Repetitions](#repetitions)
 5. [Reporting intervals, and when to claim direction only](#reporting-intervals-and-when-to-claim-direction-only)
 6. [What invalidates a comparison](#what-invalidates-a-comparison)
-7. [Worked example: what ran and what it can and cannot support](#worked-example-what-ran-and-what-it-can-and-cannot-support)
-8. [Reproduce it against your own agents](#reproduce-it-against-your-own-agents)
+7. [Cross-run parity](#cross-run-parity)
+8. [Worked example: what ran and what it can and cannot support](#worked-example-what-ran-and-what-it-can-and-cannot-support)
+9. [Reproduce it against your own agents](#reproduce-it-against-your-own-agents)
 
 ## What "within-run" means
 
@@ -153,6 +154,38 @@ Any one of these, and the comparison goes back to rows with no claim:
   changed mid-run.
 - **Unequal rounds across arms.**
 
+## Cross-run parity
+
+Two separate runs may be compared as if they were one run only when the
+comparison is **same-day** and a **parity check** proves the pinned code
+paths and the fixtures identical. Without the proof, the comparison is
+cross-run and every invalidation rule above applies in full.
+
+**Hash and compare, between the two runs' pins:**
+
+- the dispatch engine (the code that sequences fixtures and rounds)
+- the scorer, and the grader checks it applies
+- the dispatch code that builds and sends each request
+- the row serialization code (what a row records and how)
+- the fixtures tree (hash every fixture file's path and bytes, path-sorted)
+
+Hash the run artifacts as well as the source: the check is on what each
+run actually used, not on what its manifest says it used.
+
+**What must also match:**
+
+- the fixture ids, as sets, with no fixture present in one run only
+- the rounds per fixture
+- n per cell, for every cell you will compare
+- the effort and thinking shape, recorded the same way on every row
+  (shape sent, and the effective regime)
+
+If any hash differs, or any item above differs, the comparison is
+cross-run. You can still publish both runs' rows. You cannot publish a
+difference between them as a within-run result. Re-dispatch the arms in one
+run, or say plainly that the comparison is cross-run and carries the
+instrument error you cannot see.
+
 ## Worked example: what ran and what it can and cannot support
 
 On 2026-09-29 the maintainers dispatched three arms together, five rounds
@@ -164,10 +197,14 @@ requested and served model ids matched on every row. That is a within-run
 comparison in the sense of this page.
 
 The same day, GPT 6.1 Sol was dispatched on the same cuts, five rounds per
-fixture, in a **separate run on a different harness pin**. It is the
-example of what the method says not to do. The date matches, the battery
-matches, and the two harness pins do not, so setting its rows beside the
-three arms above is a cross-run comparison, and the first correction is to
+fixture, in a **separate run on a different harness pin**. It is **comparable
+under the parity check** above, and only under it: the two pins differ, so
+the pin itself proves nothing, and the comparison rests on the hashes. The
+dispatch engine, scorer, dispatch code, row serialization and fixtures tree
+were identical at both pins (verified by hashing the run artifacts), the
+fixture ids were the same 31, the rounds per fixture were the same five, and
+n per cell matched. Had any one of those differed, the same pair of runs
+would be a cross-run comparison and the first correction would be to
 re-dispatch it inside one run with the others.
 
 One more limit belongs next to the example. Both runs used the maintainers'
