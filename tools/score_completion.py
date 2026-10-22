@@ -4,6 +4,8 @@ Implements the substring/shape protocol in docs/running-the-battery.md with no
 model in the loop. Each applicable check is satisfied or not:
   produces_code, min_length, must_contain (all), must_not_contain (none),
   required_sections (all), json_schema_keys (all).
+invalid-fixture: the shape has no applicable check (a fixture defect; the
+stamp check refuses such fixtures).
 refused: empty / under 20 characters, or no code and an opening decline phrase.
 pass: every applicable check satisfied. partial: at least half. fail: fewer.
 """
@@ -42,6 +44,8 @@ def score(completion: str, shape: dict) -> str:
     ):
         return "refused"
     checks = _checks(text, shape)
+    if not checks:
+        return "invalid-fixture"
     if all(checks):
         return "pass"
     return "partial" if sum(checks) * 2 >= len(checks) else "fail"

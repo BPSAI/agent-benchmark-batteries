@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""CI gate: the five-column results files must be exactly that shape.
+"""CI gate: every results/*.csv must be the five-column shape.
 
-`results/reference-results.csv` and `results/drop3-within-run-reference.csv`
-carry raw per-fixture per-model rows with exactly the columns
-`results/README.md` prescribes. This check fails on a wrong header, an
-unknown outcome or format variant, a fixture id with no file under
-`fixtures/`, or a `base_task_id`/`format_variant` that disagrees with that
-fixture's own metadata. It prints the row count per
-(model_id, base_task_id, format_variant) cell so a reviewer can see n at a
-glance; it never computes a rate.
+Every `results/*.csv` except the two files with a different schema
+(`EXCLUDED_FILES`) carries raw per-fixture per-model rows with exactly the
+columns `results/README.md` prescribes. This check fails on a wrong header,
+an unknown outcome or format variant, a `model_id` that is not a plain
+identifier, a fixture id with no file under `fixtures/`, a
+`base_task_id`/`format_variant` that disagrees with that fixture's metadata,
+a file whose sibling `<name>.PROVENANCE.md` lacks `repetitions: N` (1 to 10),
+and any model that does not cover every fixture with exactly N rows. It
+prints n per cell; it never computes a rate.
 """
 
 from __future__ import annotations
@@ -123,6 +124,13 @@ def check_file(
                 f"{path.name}: every cell must carry exactly {limit} rows; "
                 f"({model}, {fid}) has {n}"
             )
+    for model in sorted({m for m, _ in per_fixture}):
+        for fid in sorted(index):
+            if (model, fid) not in per_fixture:
+                errors.append(
+                    f"{path.name}: model {model!r} is missing fixture {fid!r}; every "
+                    f"model must cover every fixture with exactly {limit} rows"
+                )
     return errors, cells
 
 

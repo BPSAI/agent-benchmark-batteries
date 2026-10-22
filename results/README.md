@@ -216,7 +216,7 @@ base_task_id, format_variant = index[fixture_id]
 
 `governance/check_results_shape.py` re-derives both values the same way and
 fails any row that disagrees. It accepts any plain-identifier `model_id`, so local
-models are welcome. To produce rows under the kit's rules, use
-`tools/run_local_battery.py`, which interleaves the arms by round and
-records the requested and served model id, context and sampling in each raw
-file.
+models are welcome. To produce rows under the kit's rules,
+interleave the arms by round and record the requested and served model id,
+context and sampling for every completion; a local runner that does this is
+in a follow-up PR.

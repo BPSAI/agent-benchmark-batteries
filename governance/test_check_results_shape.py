@@ -7,6 +7,7 @@ from pathlib import Path
 import check_results_shape as crs
 
 HEADER = "model_id,fixture_id,outcome,format_variant,base_task_id\n"
+INDEX1 = {"b--short": ("b", "short")}
 INDEX = {"b--short": ("b", "short"), "b--embed-neutral": ("b", "embedded-neutral")}
 
 
@@ -40,25 +41,25 @@ class ShapeTests(unittest.TestCase):
     def test_duplicate_beyond_declared_repetition_fails(self):
         row = "m,b--short,pass,short,b"
         path = write(self.dir, "x.csv", [row, row], provenance="repetitions: 1\n")
-        errors, _ = crs.check_file(path, INDEX)
+        errors, _ = crs.check_file(path, INDEX1)
         self.assertTrue(any("duplicate" in e for e in errors))
 
     def test_declared_repetitions_allow_repeats_and_report_n(self):
         row = "m,b--short,pass,short,b"
         path = write(self.dir, "x.csv", [row] * 3, provenance="repetitions: 3\n")
-        errors, cells = crs.check_file(path, INDEX)
+        errors, cells = crs.check_file(path, INDEX1)
         self.assertEqual(errors, [])
         self.assertEqual(cells[("m", "b", "short")], 3)
 
     def test_more_than_declared_repetitions_fails(self):
         row = "m,b--short,pass,short,b"
         path = write(self.dir, "x.csv", [row] * 4, provenance="repetitions: 3\n")
-        errors, _ = crs.check_file(path, INDEX)
+        errors, _ = crs.check_file(path, INDEX1)
         self.assertTrue(any("duplicate" in e for e in errors))
 
     def test_formula_leading_model_id_fails(self):
         path = write(self.dir, "x.csv", ["=cmd,b--short,pass,short,b"])
-        errors, _ = crs.check_file(path, INDEX)
+        errors, _ = crs.check_file(path, INDEX1)
         self.assertTrue(any("model_id" in e for e in errors))
 
     def test_valid_local_model_ids_pass(self):
@@ -70,23 +71,23 @@ class ShapeTests(unittest.TestCase):
                 "hf.co/org/m:Q4_K_M,b--short,pass,short,b",
             ],
         )
-        errors, _ = crs.check_file(path, INDEX)
+        errors, _ = crs.check_file(path, INDEX1)
         self.assertEqual(errors, [])
 
     def test_missing_provenance_line_is_refused_not_defaulted(self):
         path = write(self.dir, "x.csv", ["m,b--short,pass,short,b"], provenance=None)
-        errors, _ = crs.check_file(path, INDEX)
+        errors, _ = crs.check_file(path, INDEX1)
         self.assertTrue(any("repetitions" in e for e in errors))
         path2 = write(
             self.dir, "y.csv", ["m,b--short,pass,short,b"], provenance="no line here\n"
         )
-        errors, _ = crs.check_file(path2, INDEX)
+        errors, _ = crs.check_file(path2, INDEX1)
         self.assertTrue(any("repetitions" in e for e in errors))
 
     def test_declared_value_above_cap_is_refused(self):
         row = "m,b--short,pass,short,b"
         path = write(self.dir, "x.csv", [row], provenance="repetitions: 9999\n")
-        errors, _ = crs.check_file(path, INDEX)
+        errors, _ = crs.check_file(path, INDEX1)
         self.assertTrue(any("cap" in e for e in errors))
 
     def test_every_cell_must_carry_exactly_the_declared_n(self):
@@ -96,6 +97,15 @@ class ShapeTests(unittest.TestCase):
         path = write(self.dir, "x.csv", rows, provenance="repetitions: 3\n")
         errors, _ = crs.check_file(path, INDEX)
         self.assertTrue(any("exactly" in e and "b--embed-neutral" in e for e in errors))
+
+    def test_model_missing_a_fixture_is_refused(self):
+        rows = ["m,b--short,pass,short,b"] + ["n,b--short,pass,short,b"] * 1
+        rows += ["n,b--embed-neutral,pass,embedded-neutral,b"]
+        path = write(self.dir, "x.csv", rows, provenance="repetitions: 1\n")
+        errors, _ = crs.check_file(path, INDEX)
+        self.assertTrue(
+            any("m" in e and "b--embed-neutral" in e and "missing" in e for e in errors)
+        )
 
     def test_trailing_newline_in_model_id_is_rejected(self):
         row = {

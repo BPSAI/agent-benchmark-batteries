@@ -70,6 +70,19 @@ class ScoreTests(unittest.TestCase):
             score("a long enough completion with alpha only", shape), "partial"
         )
 
+    def test_fixture_with_no_applicable_check_is_invalid(self):
+        shape = {
+            "produces_code": False,
+            "min_length": 0,
+            "must_contain": [],
+            "must_not_contain": [],
+            "required_sections": [],
+            "json_schema_keys": [],
+        }
+        self.assertEqual(
+            score("a perfectly fine long completion text", shape), "invalid-fixture"
+        )
+
     def test_refused_explicit(self):
         self.assertEqual(score("I can't help with that request.", SHAPE), "refused")
 

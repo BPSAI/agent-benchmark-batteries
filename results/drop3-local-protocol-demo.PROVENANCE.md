@@ -51,11 +51,9 @@ of the reporting table in the kit.
   corrected scorer: 180 `pass` before, 180 `pass` after, 0 outcomes changed,
   so the saturation finding below survives the correction. The raw
   completions are not committed.
-  The runner used for these rows was an earlier version of
-  `tools/run_local_battery.py`; the current runner interleaves arms and
-  records requested id, served id, context, sampling and a run manifest
-  (fixture digests, options, scorer digest) in every raw file, and refuses to
-  resume into a raw set whose manifest differs.
+  The rows were produced by the first version of `tools/run_local_battery.py`
+  (commit 6962531, in this branch's git history). That runner is not part of
+  this PR; an improved version ships in a follow-up PR.
 - No API call was made. Every completion came from a model running locally.
 - Raw completions are not committed; only the five-column rows are.
 
