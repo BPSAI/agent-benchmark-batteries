@@ -183,7 +183,8 @@ not included, and no mapping was invented.
 a wrong header, an unknown outcome or variant, a fixture id or metadata
 mismatch, and a `model_id` that is not a plain identifier. Every file needs a
 sibling `<name>.PROVENANCE.md` with a `repetitions: N` line (1 to 10, no
-default), and every `(model_id, fixture_id)` must appear exactly N times. It
+default) and a `fixture_ids:` line recording the fixture set the file was produced
+from; every model must cover every recorded fixture exactly N times. It
 prints n per cell.
 
 **Reminder, unchanged:** no per-cell rate from this file, or from any file

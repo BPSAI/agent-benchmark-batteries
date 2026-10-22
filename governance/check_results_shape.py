@@ -21,6 +21,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+from shape_rules import OUTCOMES  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = REPO_ROOT / "fixtures"
 RESULTS_DIR = REPO_ROOT / "results"
@@ -28,10 +31,10 @@ RESULTS_DIR = REPO_ROOT / "results"
 # Results files with a different schema; every other results/*.csv is checked.
 EXCLUDED_FILES = ("drop2-thinking-onoff-reference.csv", "receipts-banked-rows.csv")
 COLUMNS = ["model_id", "fixture_id", "outcome", "format_variant", "base_task_id"]
-OUTCOMES = {"pass", "partial", "fail", "refused"}
 VARIANTS = {"short", "embedded-neutral", "embedded-production"}
 MODEL_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]*\Z")
 MAX_REPETITIONS = 10
+FIXTURE_IDS = re.compile(r"^fixture_ids:[ \t]*(\S.*?)[ \t]*$", re.M)
 REPETITIONS = re.compile(r"^repetitions:[ \t]*(\d+)[ \t]*$", re.M)
 
 
@@ -94,6 +97,17 @@ def declared_repetitions(path: Path) -> int | None:
     return None
 
 
+def recorded_fixture_ids(path: Path) -> set[str] | None:
+    """`fixture_ids: a, b, ...` from the sibling PROVENANCE file (the set the file was
+    produced from), or None when absent."""
+    prov = path.with_name(path.stem + ".PROVENANCE.md")
+    if prov.is_file():
+        match = FIXTURE_IDS.search(prov.read_text())
+        if match:
+            return {x.strip() for x in match.group(1).split(",") if x.strip()}
+    return None
+
+
 def check_file(
     path: Path, index: dict[str, tuple[str, str]]
 ) -> tuple[list[str], Counter]:
@@ -110,6 +124,12 @@ def check_file(
         return [
             f"{path.name}: declared repetitions {limit} is outside the cap "
             f"1..{MAX_REPETITIONS}"
+        ], cells
+    recorded = recorded_fixture_ids(path)
+    if recorded is None:
+        return [
+            f"{path.name}: sibling {path.stem}.PROVENANCE.md must record the fixture "
+            f"set it was produced from as `fixture_ids: a, b, ...`"
         ], cells
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
@@ -141,11 +161,11 @@ def check_file(
     if not per_fixture and not errors:
         errors.append(f"{path.name}: no rows (a results file must carry data)")
     for model in sorted({m for m, _ in per_fixture}):
-        for fid in sorted(index):
+        for fid in sorted(recorded):
             if (model, fid) not in per_fixture:
                 errors.append(
                     f"{path.name}: model {model!r} is missing fixture {fid!r}; every "
-                    f"model must cover every fixture with exactly {limit} rows"
+                    f"model must cover every recorded fixture with exactly {limit} rows"
                 )
     return errors, cells
 

@@ -37,14 +37,16 @@ enforces on every `results/*.csv` (except `drop2-thinking-onoff-reference.csv`
 and `receipts-banked-rows.csv`):
 
 - Exactly these five columns, in this order: `model_id`, `fixture_id`,
-  `outcome`, `format_variant`, `base_task_id`. `outcome` is `pass`, `partial`,
+  `outcome`, `format_variant`, `base_task_id`. `outcome` is `pass`, `partial`, `invalid-fixture`,
   `fail` or `refused`. Copy `format_variant` and `base_task_id` from the
   fixture file's own `metadata` (see `results/README.md`).
 - `model_id` is a plain identifier (letters, digits, `. _ : / -`, starting
   with a letter or digit).
 - A sibling `results/<name>.PROVENANCE.md` containing a line
-  `repetitions: N` (N from 1 to 10). Every model in the file must cover
-  **every** fixture with **exactly** N rows, and the file must not be empty.
+  `repetitions: N` (N from 1 to 10) and a line
+  `fixture_ids: a, b, ...` recording the fixture set the file was produced from
+  (so adding fixtures later does not invalidate it). Every model in the file must cover
+  **every recorded** fixture with **exactly** N rows, and the file must not be empty.
 - No prompts beyond what is in `fixtures/`, and no telemetry, cost data or
   infrastructure detail from your run environment.
 - A fixture whose `expected_shape` has no applicable check is a fixture defect:

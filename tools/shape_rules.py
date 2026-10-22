@@ -6,6 +6,9 @@ check (governance/check_fixture_stamps.py) so the two can never disagree.
 
 from __future__ import annotations
 
+# The one outcome vocabulary: everything score() can return, and what results files accept.
+OUTCOMES = frozenset({"pass", "partial", "fail", "refused", "invalid-fixture"})
+
 
 def min_length_of(shape: dict) -> int:
     """The shape's min_length as an int; ValueError when it is not a number."""
