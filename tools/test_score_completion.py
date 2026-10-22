@@ -105,6 +105,19 @@ class ScoreTests(unittest.TestCase):
         }
         self.assertEqual(score("a long enough completion", shape), "invalid-fixture")
 
+    def test_malformed_min_length_returns_the_named_fixture_error(self):
+        shape = {
+            "produces_code": True,
+            "min_length": "lots",
+            "must_contain": [],
+            "must_not_contain": [],
+            "required_sections": [],
+            "json_schema_keys": [],
+        }
+        self.assertEqual(
+            score("```python\nx = 1\n```  and some more text", shape), "invalid-fixture"
+        )
+
     def test_refused_explicit(self):
         self.assertEqual(score("I can't help with that request.", SHAPE), "refused")
 

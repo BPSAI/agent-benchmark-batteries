@@ -126,10 +126,10 @@ def check_file(
             f"1..{MAX_REPETITIONS}"
         ], cells
     recorded = recorded_fixture_ids(path)
-    if recorded is None:
+    if not recorded:  # absent or empty both fail closed
         return [
-            f"{path.name}: sibling {path.stem}.PROVENANCE.md must record the fixture "
-            f"set it was produced from as `fixture_ids: a, b, ...`"
+            f"{path.name}: sibling {path.stem}.PROVENANCE.md must record a non-empty "
+            f"fixture set as `fixture_ids: a, b, ...`"
         ], cells
     with path.open(newline="") as handle:
         reader = csv.DictReader(handle)
@@ -147,6 +147,11 @@ def check_file(
                     (row["model_id"], row["base_task_id"], row["format_variant"])
                 ] += 1
                 per_fixture[(row["model_id"], row["fixture_id"])] += 1
+                if row["fixture_id"] not in recorded:
+                    errors.append(
+                        f"{path.name}:{lineno}: fixture_id {row['fixture_id']!r} is "
+                        f"not in the recorded fixture_ids set"
+                    )
     for (model, fid), n in sorted(per_fixture.items()):
         if n > limit:
             errors.append(

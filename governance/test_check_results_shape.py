@@ -247,6 +247,35 @@ class ShapeTests(unittest.TestCase):
         for shape in ({}, {"must_contain": ["x"]}):
             self.assertIn(score_completion.score("y" * 30, shape), shape_rules.OUTCOMES)
 
+    def test_empty_fixture_ids_line_is_refused(self):
+        for line in ("fixture_ids:\n", "fixture_ids: ,  ,\n"):
+            path = write(
+                self.dir,
+                "x.csv",
+                ["m,b--short,pass,short,b"],
+                provenance="repetitions: 1\n" + line,
+            )
+            errors, _ = crs.check_file(path, INDEX1)
+            self.assertTrue(any("fixture_ids" in e for e in errors), line)
+
+    def test_row_outside_the_recorded_set_is_refused_naming_it(self):
+        rows = ["m,b--short,pass,short,b", "m,b--embed-neutral,pass,embedded-neutral,b"]
+        path = write(self.dir, "x.csv", rows)  # provenance records only b--short
+        errors, _ = crs.check_file(path, INDEX)
+        self.assertTrue(
+            any("b--embed-neutral" in e and "not in the recorded" in e for e in errors)
+        )
+
+    def test_recorded_id_with_no_rows_is_refused_naming_the_gap(self):
+        path = write(
+            self.dir,
+            "x.csv",
+            ["m,b--short,pass,short,b"],
+            provenance="repetitions: 1\nfixture_ids: b--short, b--embed-neutral\n",
+        )
+        errors, _ = crs.check_file(path, INDEX)
+        self.assertTrue(any("b--embed-neutral" in e and "missing" in e for e in errors))
+
 
 if __name__ == "__main__":
     unittest.main()

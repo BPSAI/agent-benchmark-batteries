@@ -62,9 +62,12 @@ python3 -m unittest discover -s governance -p "test_*.py"
 python3 -m unittest discover -s tools -p "test_*.py"
 ```
 
-Report `n` (how many times you ran each cell) in your PR description --
-see [`docs/running-the-battery.md`](docs/running-the-battery.md) for why
-a single run isn't a usable rate on its own.
+Report `n` (how many times you ran each cell) in your PR description. CI
+enforces only what is listed above: a declared `repetitions:` from 1 to 10 and
+exactly that many rows per model per recorded fixture. It does not enforce
+n >= 3. That is the rule for publishing a rate -- no per-cell rate below n = 3
+-- see [`docs/running-the-battery.md`](docs/running-the-battery.md) for why a
+single run isn't a usable rate on its own.
 
 ## New fixtures
 

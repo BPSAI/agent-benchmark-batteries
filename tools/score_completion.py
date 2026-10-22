@@ -43,7 +43,10 @@ def _checks(text: str, shape: dict) -> list[bool]:
 
 def score(completion: str, shape: dict) -> str:
     text = completion or ""
-    checks = _checks(text, shape)
+    try:
+        checks = _checks(text, shape)
+    except ValueError:  # malformed shape (e.g. min_length): a fixture defect
+        return "invalid-fixture"
     if not checks:  # a fixture defect, reported before any completion judgment
         return "invalid-fixture"
     stripped = text.strip()
