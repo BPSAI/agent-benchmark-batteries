@@ -141,3 +141,83 @@ The `basis` column names the class of evidence behind each figure
 and lists every known issue. Empty `spend_usd`/`usd_per_completed` cells
 are rows with no printed figure (a local model with no bill, or a
 withdrawn cell), not zeros.
+
+## `drop3-local-protocol-demo.csv` -- a protocol demonstration
+
+**180 rows, 60 cells, n = 3 per cell, two local arms (`gemma4:31b` and
+`phi4:14b`), all 30 fixtures in this repo, no API spend.** It carries
+exactly the five columns the top of this README prescribes (`model_id`,
+`fixture_id`, `outcome`, `format_variant`, `base_task_id`), raw per-fixture
+per-model rows, no aggregated rates. Its provenance, and the declared
+repetition count the CI check reads, are in
+[`drop3-local-protocol-demo.PROVENANCE.md`](drop3-local-protocol-demo.PROVENANCE.md).
+
+**What it is not.** It is a demonstration that the protocol and the shape
+work on this repo's fixtures. It is NOT a within-run comparison and NOT a
+reference comparison, because it did not meet the kit's rules
+([`docs/within-run-comparison.md`](../docs/within-run-comparison.md)): the
+arms were not interleaved by round (arm A finished before arm B started);
+the server-side context differed (32768 versus 16384 tokens); each arm ran
+at its own model's default sampling, and those defaults differ; and the
+served model id was never captured. Do not compare the two arms from this
+file.
+
+**What it shows.** Every one of the 180 rows is `pass` (re-scored from the raw completions
+with the corrected scorer; no outcome changed): the battery did not
+separate the two arms. That is a finding about the fixtures' discriminating
+power under the substring/shape scorer, not about either model. There is no
+interval to compute and no direction to claim.
+
+**The earlier production-set runs.** The maintainers' own runs of
+2026-09-29 (a three-arm run of Sonnet 5.5, Sonnet 5 and Haiku 4.5, and a
+separate GPT 6.1 Sol run, five rounds per fixture each) used a production
+fixture set, not the 30 fixtures here. None of those rows map to this repo's
+shape: their `fixture_id` values are not files under `fixtures/`, and they
+have no matched-pairs variant structure, so there is no honest
+`format_variant` or `base_task_id` to put in the other two columns. They are
+not included, and no mapping was invented.
+
+**Checks.** `governance/check_results_shape.py` runs over every
+`results/*.csv` except the two files with a different schema
+(`drop2-thinking-onoff-reference.csv`, `receipts-banked-rows.csv`). It fails
+a wrong header, an unknown outcome or variant, a fixture id or metadata
+mismatch, and a `model_id` that is not a plain identifier. Every file needs a
+sibling `<name>.PROVENANCE.md` with a `repetitions: N` line (1 to 10, no
+default) and a `fixture_ids:` line recording the fixture set the file was produced
+from; every model must cover every recorded fixture exactly N times. It
+prints n per cell.
+
+**Reminder, unchanged:** no per-cell rate from this file, or from any file
+here, until a given `(model_id, base_task_id, format_variant)` cell has n >=
+3 rows. This file has n = 3, and still supports no rate claim, because every
+cell is 3 of 3.
+
+### Deriving `format_variant` and `base_task_id` from `fixtures/`
+
+Both columns come from the fixture file itself, never from the fixture id's
+suffix and never by guessing. For each row, open the fixture whose `id`
+equals the row's `fixture_id` (files live under `fixtures/<task_type>/`) and
+copy two fields from its `metadata` object:
+
+- `base_task_id` <- `metadata.base_task_id`
+- `format_variant` <- `metadata.format_variant`
+
+The id suffix is not the variant name: a fixture id ending `--embed-prod`
+has `format_variant` `embedded-production`, and `--embed-neutral` has
+`embedded-neutral`. Copy the metadata value. A few lines of Python do it:
+
+```python
+import json, pathlib
+index = {}
+for path in pathlib.Path("fixtures").rglob("*.json"):
+    fx = json.loads(path.read_text())
+    index[fx["id"]] = (fx["metadata"]["base_task_id"], fx["metadata"]["format_variant"])
+base_task_id, format_variant = index[fixture_id]
+```
+
+`governance/check_results_shape.py` re-derives both values the same way and
+fails any row that disagrees. It accepts any plain-identifier `model_id`, so local
+models are welcome. To produce rows under the kit's rules,
+interleave the arms by round and record the requested and served model id,
+context and sampling for every completion; a local runner that does this is
+in a follow-up PR.

@@ -6,11 +6,15 @@ metadata.public_release == true or metadata.provenance == "original-authored".
 This is the mechanical backstop for the repo's core governance promise: a
 fixture cannot land here without an explicit, checked provenance claim.
 """
+
 from __future__ import annotations
 
 import json
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+from shape_rules import has_applicable_check  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = REPO_ROOT / "fixtures"
@@ -42,6 +46,13 @@ def check_stamp(path: Path) -> str | None:
             f"{path}: metadata.provenance must be "
             f"{REQUIRED_PROVENANCE!r}, got {metadata.get('provenance')!r}"
         )
+
+    try:
+        applicable = has_applicable_check(data.get("expected_shape"))
+    except ValueError as exc:
+        return f"{path}: expected_shape is malformed ({exc})"
+    if not applicable:
+        return f"{path}: expected_shape has no applicable check (vacuous fixture)"
 
     return None
 
