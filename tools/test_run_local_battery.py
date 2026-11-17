@@ -36,7 +36,8 @@ class FakeClient:
         self.digests = digests or {}
 
     def digest(self, model):
-        return self.digests.get(model, "sha256:" + model)
+        d = self.digests.get(model, "sha256:" + model)
+        return d(len(self.calls)) if callable(d) else d
 
     def chat(self, model, system, user, options):
         self.calls.append(model)
@@ -207,6 +208,66 @@ class RunnerTests(unittest.TestCase):
             self.run_it(FakeClient(served={"m1": "other-model"}), models=("m1",))
         self.assertIn("other-model", str(cm.exception))
         self.assertEqual(list(self.raw.glob("r*.json")), [])
+
+
+    # --- Review round 1 on #5 ---
+
+    def test_scorer_pin_covers_every_local_module_the_scorer_imports(self):
+        """SERIOUS 1: a change to shape_rules.py must refuse a resume."""
+        import ast
+
+        tools = Path(rlb.__file__).parent
+        tree = ast.parse((tools / "score_completion.py").read_text())
+        local = {
+            node.module + ".py"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.module
+            and (tools / (node.module + ".py")).exists()
+        }
+        self.assertTrue(local)
+        self.assertLessEqual(local | {"score_completion.py"}, set(rlb.SCORER_FILES))
+
+    def test_resume_refuses_a_changed_runner(self):
+        """MINOR 4: the harness itself is pinned per run."""
+        self.run_it(FakeClient())
+        with mock.patch.object(rlb, "RUNNER_SHA256", "different"):
+            with self.assertRaises(SystemExit) as cm:
+                self.run_it(FakeClient())
+        self.assertIn("runner_sha256", str(cm.exception))
+
+    def test_resume_refuses_a_changed_fixture_set(self):
+        """MINOR 4: adding a fixture between invocations is a different run."""
+        self.run_it(FakeClient())
+        self.fx.append(fixture("b2--short", base="b2"))
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient())
+        self.assertIn("fixture_ids", str(cm.exception))
+
+    def test_run_records_start_and_completion_times(self):
+        """MINOR 4: the date is part of the run record."""
+        self.run_it(FakeClient())
+        manifest = json.loads((self.raw / rlb.RUN_MANIFEST).read_text())
+        self.assertRegex(manifest["started_at_utc"], r"^\d{4}-\d\d-\d\dT")
+        raw = json.loads(next(self.raw.glob("*.json")).read_text())
+        self.assertRegex(raw["completed_at_utc"], r"^\d{4}-\d\d-\d\dT")
+
+    def test_weights_replaced_mid_invocation_stop_the_run(self):
+        """MINOR 2: the digest is re-read every round, not once per invocation."""
+        client = FakeClient(digests={"m1": lambda n: "sha256:a" if n < 2 else "sha256:b"})
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(client, models=("m1",), rounds=2)
+        self.assertIn("digest", str(cm.exception))
+
+    def test_name_normalization_matches_ollama(self):
+        """MINOR 3: default registry and namespace dropped, case-insensitive, :latest implied."""
+        n = rlb._normalize_name
+        self.assertEqual(n("library/gemma4:31b"), "gemma4:31b")
+        self.assertEqual(n("registry.ollama.ai/library/gemma4:31b"), "gemma4:31b")
+        self.assertEqual(n("Gemma4:31B"), "gemma4:31b")
+        self.assertEqual(n("llama3.2"), "llama3.2:latest")
+        self.assertEqual(n("hf.co/u/r"), "hf.co/u/r:latest")
+        self.assertEqual(n("myuser/custom:v1"), "myuser/custom:v1")
 
 
 if __name__ == "__main__":
