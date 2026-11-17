@@ -15,11 +15,20 @@ completion, so an interruption can neither skip a completion nor leave a row
 without its raw file. Raw completions stay in RAW_DIR; ROWS_CSV receives the
 five-column rows only.
 
-One RAW_DIR is one run. RAW_DIR/run.manifest (JSON) pins the model panel, sampling
-options, scorer and each model's weights digest on first use; a later
-invocation that changes any of them is refused, so a CSV rebuilt from RAW_DIR
-is always a single interleaved run. The served model id must match the
-requested one, or the run stops before anything is written for that cell.
+One RAW_DIR is one run. RAW_DIR/run.manifest (JSON) pins, on first use:
+the model panel, sampling options, scorer hash (the scorer and every local
+module it imports), the runner's own hash, every fixture's digest and each
+model's weights digest; it also records the start time. A later invocation
+that changes any pinned field is refused, so a CSV rebuilt from RAW_DIR is
+always a single interleaved run. Any edit to this file, even whitespace,
+changes the runner hash: an existing RAW_DIR cannot be resumed by an edited
+runner and needs a fresh directory.
+
+After every completion the model's weights digest is re-read before its row
+is written, so a pull that replaces the weights mid-run stops the run with no
+tainted row. The served model id must match the requested one (Ollama's name
+rules); Ollama echoes the requested id, so this mainly catches a proxy that
+rewrites it. Two arms that name the same model are refused.
 """
 
 from __future__ import annotations
@@ -183,8 +192,8 @@ def _raw_files(raw_dir: Path) -> list[Path]:
 
 
 def _check_run(raw_dir: Path, run_manifest: dict) -> None:
-    """One RAW_DIR is one run: the panel, options, scorer and model digests are
-    pinned on first use. Arms added later were never interleaved with the
+    """One RAW_DIR is one run: the panel, options, scorer and runner hashes,
+    fixture digests and model weights digests are pinned on first use. Arms added later were never interleaved with the
     first ones, and a tag whose weights changed is a different arm."""
     path = raw_dir / RUN_MANIFEST
     if not path.exists():
@@ -201,9 +210,16 @@ def _check_run(raw_dir: Path, run_manifest: dict) -> None:
         "options",
         "scorer_sha256",
         "runner_sha256",
-        "fixture_ids",
+        "fixture_digests",
         "model_digests",
     ):
+        if stored.get(field) != run_manifest[field] and field == "fixture_digests":
+            old, new = stored.get(field) or {}, run_manifest[field]
+            changed = sorted(k for k in old.keys() | new.keys() if old.get(k) != new.get(k))
+            sys.exit(
+                f"refusing to resume: run fixture_digests differ from {path.name} "
+                f"for {changed}; start a fresh RAW_DIR"
+            )
         if stored.get(field) != run_manifest[field]:
             what = "digest" if field == "model_digests" else field
             sys.exit(
@@ -252,6 +268,9 @@ def run(
     for fx in fixtures:
         if not SAFE_ID.match(fx["id"]):
             raise ValueError(f"unsafe fixture id {fx['id']!r}")
+    normalized = [_normalize_name(m) for m in models]
+    if len(set(normalized)) != len(normalized):
+        sys.exit(f"refusing: two arms name the same model: {list(models)!r}")
     raw_dir.mkdir(parents=True, exist_ok=True)
     _guard_unbacked_csv(raw_dir, rows_csv)
     digests = {m: client.digest(m) for m in models}
@@ -262,7 +281,7 @@ def run(
             "options": options,
             "scorer_sha256": SCORER_SHA256,
             "runner_sha256": RUNNER_SHA256,
-            "fixture_ids": sorted(fx["id"] for fx in fixtures),
+            "fixture_digests": {fx["id"]: _fixture_sha256(fx) for fx in fixtures},
             "model_digests": digests,
             "started_at_utc": _now(),
         },
@@ -270,12 +289,6 @@ def run(
     shows = {m: client.show(m) for m in models}
     start = time.time()
     for rnd in range(1, rounds + 1):
-        now = {m: client.digest(m) for m in models}
-        if now != digests:
-            sys.exit(
-                f"refusing: model weights digest changed during the run "
-                f"({digests!r} -> {now!r}); start a fresh RAW_DIR"
-            )
         for fx in fixtures:
             for model in models:
                 path = _raw_path(raw_dir, rnd, model, fx["id"])
@@ -286,6 +299,15 @@ def run(
                 reply = client.chat(
                     model, fx["system_prompt"], fx["input_prompt"], options
                 )
+                # Re-read the weights digest after every completion and before
+                # its row is written: a pull that replaced the weights during
+                # or before this call stops the run with no tainted row.
+                if client.digest(model) != digests[model]:
+                    sys.exit(
+                        f"refusing: model weights digest for {model!r} changed "
+                        "during the run; nothing written for this cell; start a "
+                        "fresh RAW_DIR"
+                    )
                 if not _same_model(model, reply["served_model"]):
                     sys.exit(
                         f"refusing: requested {model!r} but the server answered as "
@@ -319,11 +341,6 @@ def run(
                 )
                 rebuild_csv(raw_dir, rows_csv, models)
         print(f"round {rnd} done at {time.time() - start:.0f}s", flush=True)
-    if {m: client.digest(m) for m in models} != digests:
-        sys.exit(
-            "refusing: model weights digest changed during the last round; "
-            "start a fresh RAW_DIR"
-        )
     rebuild_csv(raw_dir, rows_csv, models)
     print(f"total wall {time.time() - start:.0f}s", flush=True)
 

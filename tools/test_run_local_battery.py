@@ -148,7 +148,7 @@ class RunnerTests(unittest.TestCase):
         self.fx[0] = dict(self.fx[0], input_prompt="a different task")
         with self.assertRaises(SystemExit) as cm:
             self.run_it(FakeClient())
-        self.assertIn("fixture_sha256", str(cm.exception))
+        self.assertRegex(str(cm.exception), r"fixture_(sha256|digests)")
 
     def test_resume_refuses_changed_scorer(self):
         self.run_it(FakeClient())
@@ -193,7 +193,7 @@ class RunnerTests(unittest.TestCase):
         self.fx[0] = fixture("b1--short", base="b9")
         with self.assertRaises(SystemExit) as cm:
             self.run_it(FakeClient())
-        self.assertIn("fixture_sha256", str(cm.exception))
+        self.assertRegex(str(cm.exception), r"fixture_(sha256|digests)")
 
     def test_resume_refuses_a_replaced_model_digest(self):
         """P2: the same tag with new weights is a different arm."""
