@@ -242,7 +242,7 @@ class RunnerTests(unittest.TestCase):
         self.fx.append(fixture("b2--short", base="b2"))
         with self.assertRaises(SystemExit) as cm:
             self.run_it(FakeClient())
-        self.assertIn("fixture_ids", str(cm.exception))
+        self.assertIn("fixture_digests", str(cm.exception))
 
     def test_run_records_start_and_completion_times(self):
         """MINOR 4: the date is part of the run record."""
@@ -260,11 +260,27 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("digest", str(cm.exception))
 
     def test_weights_replaced_during_the_last_round_stop_the_run(self):
-        """MINOR 2: a swap during the final round is caught before the CSV is rebuilt."""
+        """A swap is caught after the completion that saw it, before its row is written."""
         client = FakeClient(digests={"m1": lambda n: "sha256:a" if n < 2 else "sha256:b"})
         with self.assertRaises(SystemExit) as cm:
             self.run_it(client, models=("m1",), rounds=1)
         self.assertIn("digest", str(cm.exception))
+        self.assertEqual(len(list(self.raw.glob("*.json"))), 1)
+        self.assertEqual([r[1] for r in self.rows()[1:]], ["b1--short"])
+
+    def test_two_names_for_the_same_model_are_refused(self):
+        """Round 2 nit: one set of weights must not run as two arms."""
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient(), models=("m1", "M1:latest"))
+        self.assertIn("same model", str(cm.exception))
+
+    def test_resume_refuses_changed_fixture_bytes_even_for_unrun_cells(self):
+        """Round 2 nit: the manifest pins every fixture's bytes, not just its id."""
+        self.run_it(FakeClient(), rounds=1)
+        self.fx[1] = dict(self.fx[1], input_prompt="edited")
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient(), rounds=2)
+        self.assertIn("fixture_digests", str(cm.exception))
 
     def test_name_normalization_matches_ollama(self):
         """MINOR 3: default registry and namespace dropped, case-insensitive, :latest implied."""
