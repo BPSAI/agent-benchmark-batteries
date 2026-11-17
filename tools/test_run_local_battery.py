@@ -31,8 +31,12 @@ def fixture(fid, base="b1", variant="short"):
 
 
 class FakeClient:
-    def __init__(self, served=None, fail_on_call=None):
+    def __init__(self, served=None, fail_on_call=None, digests=None):
         self.calls, self.served, self.fail_on_call = [], served or {}, fail_on_call
+        self.digests = digests or {}
+
+    def digest(self, model):
+        return self.digests.get(model, "sha256:" + model)
 
     def chat(self, model, system, user, options):
         self.calls.append(model)
@@ -84,10 +88,11 @@ class RunnerTests(unittest.TestCase):
 
     def test_raw_file_records_requested_served_and_settings(self):
         opts = {"num_ctx": 16384, "temperature": 0.0}
-        self.run_it(FakeClient(served={"m1": "m1-snapshot"}), options=opts)
+        self.run_it(FakeClient(served={"m1": "m1:latest"}), options=opts)
         raw = json.loads(next(self.raw.glob("*.json")).read_text())
         self.assertEqual(raw["requested_model"], "m1")
-        self.assertEqual(raw["served_model"], "m1-snapshot")
+        self.assertEqual(raw["served_model"], "m1:latest")
+        self.assertEqual(raw["model_digest"], "sha256:m1")
         self.assertEqual(raw["options"], opts)
         self.assertEqual(raw["show"], {"parameters": "temperature 1"})
 
@@ -150,6 +155,58 @@ class RunnerTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as cm:
                 self.run_it(FakeClient())
         self.assertIn("scorer_sha256", str(cm.exception))
+
+
+    # --- Findings carried from the Drop 3 kit review (PR #4) ---
+
+    def test_adding_an_arm_to_an_existing_run_is_refused(self):
+        """P1: arms added in a later invocation were never interleaved."""
+        self.run_it(FakeClient(), models=("m1",))
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient(), models=("m1", "m2"))
+        self.assertIn("models", str(cm.exception))
+
+    def test_raw_dir_with_files_but_no_run_manifest_is_refused(self):
+        """P1: raw files of unknown provenance never enter a rebuilt CSV."""
+        self.run_it(FakeClient(), models=("m1",))
+        (self.raw / "run.json").unlink()
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient(), models=("m1",))
+        self.assertIn("run.json", str(cm.exception))
+
+    def test_rebuild_skips_nothing_and_admits_no_foreign_arm(self):
+        """P1: a raw file whose arm is outside the run's panel is refused."""
+        self.run_it(FakeClient(), models=("m1",))
+        src = next(self.raw.glob("r1--m1--*.json"))
+        data = json.loads(src.read_text())
+        data["requested_model"] = "intruder"
+        data["row"][0] = "intruder"
+        (self.raw / "r1--intruder--b1--short.json").write_text(json.dumps(data))
+        with self.assertRaises(SystemExit) as cm:
+            rlb.rebuild_csv(self.raw, self.csv, ("m1",))
+        self.assertIn("intruder", str(cm.exception))
+
+    def test_resume_refuses_changed_fixture_metadata(self):
+        """P2: metadata is part of the fixture digest."""
+        self.run_it(FakeClient())
+        self.fx[0] = fixture("b1--short", base="b9")
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient())
+        self.assertIn("fixture_sha256", str(cm.exception))
+
+    def test_resume_refuses_a_replaced_model_digest(self):
+        """P2: the same tag with new weights is a different arm."""
+        self.run_it(FakeClient(), models=("m1",))
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient(digests={"m1": "sha256:new-weights"}), models=("m1",))
+        self.assertIn("digest", str(cm.exception))
+
+    def test_served_model_that_differs_from_requested_is_refused(self):
+        """Finding 4: the served id is compared, and nothing is written for it."""
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(FakeClient(served={"m1": "other-model"}), models=("m1",))
+        self.assertIn("other-model", str(cm.exception))
+        self.assertEqual(list(self.raw.glob("r*.json")), [])
 
 
 if __name__ == "__main__":
