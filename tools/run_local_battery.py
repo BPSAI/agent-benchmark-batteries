@@ -14,6 +14,12 @@ RAW_DIR is the source of truth: each completion is written there atomically
 completion, so an interruption can neither skip a completion nor leave a row
 without its raw file. Raw completions stay in RAW_DIR; ROWS_CSV receives the
 five-column rows only.
+
+One RAW_DIR is one run. RAW_DIR/run.manifest (JSON) pins the model panel, sampling
+options, scorer and each model's weights digest on first use; a later
+invocation that changes any of them is refused, so a CSV rebuilt from RAW_DIR
+is always a single interleaved run. The served model id must match the
+requested one, or the run stops before anything is written for that cell.
 """
 
 from __future__ import annotations
@@ -35,6 +41,7 @@ from score_completion import score
 ROOT = Path(__file__).resolve().parent.parent
 HOST = "http://127.0.0.1:11434"
 COLUMNS = ["model_id", "fixture_id", "outcome", "format_variant", "base_task_id"]
+RUN_MANIFEST = "run.manifest"
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\Z")
 SCORER_SHA256 = hashlib.sha256(
     (Path(__file__).parent / "score_completion.py").read_bytes()
@@ -67,6 +74,18 @@ class OllamaClient:
             "served_model": reply.get("model", ""),
         }
 
+    def digest(self, model: str) -> str:
+        """The local weights' digest for this tag, from /api/tags."""
+        req = urllib.request.Request(HOST + "/api/tags")
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            tags = json.load(resp).get("models", [])
+        for t in tags:
+            if t.get("name") == model or t.get("model") == model or (
+                ":" not in model and t.get("name") == model + ":latest"
+            ):
+                return t.get("digest", "")
+        sys.exit(f"refusing: {model!r} is not in the local model list")
+
     def show(self, model: str) -> dict:
         info = _post("/api/show", {"model": model})
         return {
@@ -85,7 +104,7 @@ def _raw_path(raw_dir: Path, rnd: int, model: str, fid: str) -> Path:
 
 
 def _fixture_sha256(fx: dict) -> str:
-    keys = ("id", "system_prompt", "input_prompt", "expected_shape")
+    keys = ("id", "system_prompt", "input_prompt", "expected_shape", "metadata")
     return hashlib.sha256(
         json.dumps({k: fx[k] for k in keys}, sort_keys=True).encode()
     ).hexdigest()
@@ -122,9 +141,48 @@ def _write_atomic(path: Path, text: str) -> None:
     os.replace(tmp, path)
 
 
-def rebuild_csv(raw_dir: Path, rows_csv: Path) -> None:
-    """Rewrite rows_csv from every raw file in raw_dir (sorted, atomic)."""
-    raws = [json.loads(p.read_text()) for p in raw_dir.glob("*.json")]
+def _same_model(requested: str, served: str) -> bool:
+    """Ollama echoes the tag it served; a bare name resolves to `:latest`."""
+    if served == requested:
+        return True
+    return ":" not in requested and served == requested + ":latest"
+
+
+def _raw_files(raw_dir: Path) -> list[Path]:
+    return [p for p in raw_dir.glob("*.json") if p.name != RUN_MANIFEST]
+
+
+def _check_run(raw_dir: Path, run_manifest: dict) -> None:
+    """One RAW_DIR is one run: the panel, options, scorer and model digests are
+    pinned on first use. Arms added later were never interleaved with the
+    first ones, and a tag whose weights changed is a different arm."""
+    path = raw_dir / RUN_MANIFEST
+    if not path.exists():
+        if _raw_files(raw_dir):
+            sys.exit(
+                f"refusing: {raw_dir} holds raw files but no {RUN_MANIFEST}; "
+                "start a fresh RAW_DIR"
+            )
+        _write_atomic(path, json.dumps(run_manifest, indent=1, sort_keys=True))
+        return
+    stored = json.loads(path.read_text())
+    for field in ("models", "options", "scorer_sha256", "model_digests"):
+        if stored.get(field) != run_manifest[field]:
+            what = "digest" if field == "model_digests" else field
+            sys.exit(
+                f"refusing to resume: run {what} differs from {path.name} "
+                f"({stored.get(field)!r} != {run_manifest[field]!r}); "
+                "start a fresh RAW_DIR"
+            )
+
+
+def rebuild_csv(raw_dir: Path, rows_csv: Path, models) -> None:
+    """Rewrite rows_csv from every raw file in raw_dir (sorted, atomic).
+    A raw file whose arm is outside the run's panel is refused, not mixed in."""
+    raws = [json.loads(p.read_text()) for p in _raw_files(raw_dir)]
+    foreign = sorted({r["requested_model"] for r in raws} - set(models))
+    if foreign:
+        sys.exit(f"refusing: {raw_dir} holds raw files for arms outside this run: {foreign}")
     raws.sort(key=lambda r: (r["requested_model"], r["round"], r["row"][1]))
     tmp = rows_csv.with_name(rows_csv.name + ".tmp")
     with tmp.open("w", newline="") as out:
@@ -139,7 +197,7 @@ def _guard_unbacked_csv(raw_dir: Path, rows_csv: Path) -> None:
     if not rows_csv.exists():
         return
     backed = Counter(
-        tuple(json.loads(p.read_text())["row"][:2]) for p in raw_dir.glob("*.json")
+        tuple(json.loads(p.read_text())["row"][:2]) for p in _raw_files(raw_dir)
     )
     have = Counter(
         (r["model_id"], r["fixture_id"]) for r in csv.DictReader(rows_csv.open())
@@ -159,6 +217,16 @@ def run(
             raise ValueError(f"unsafe fixture id {fx['id']!r}")
     raw_dir.mkdir(parents=True, exist_ok=True)
     _guard_unbacked_csv(raw_dir, rows_csv)
+    digests = {m: client.digest(m) for m in models}
+    _check_run(
+        raw_dir,
+        {
+            "models": list(models),
+            "options": options,
+            "scorer_sha256": SCORER_SHA256,
+            "model_digests": digests,
+        },
+    )
     shows = {m: client.show(m) for m in models}
     start = time.time()
     for rnd in range(1, rounds + 1):
@@ -172,6 +240,11 @@ def run(
                 reply = client.chat(
                     model, fx["system_prompt"], fx["input_prompt"], options
                 )
+                if not _same_model(model, reply["served_model"]):
+                    sys.exit(
+                        f"refusing: requested {model!r} but the server answered as "
+                        f"{reply['served_model']!r}; nothing written for this cell"
+                    )
                 outcome = score(reply["content"], fx["expected_shape"])
                 meta = fx["metadata"]
                 _write_atomic(
@@ -182,6 +255,7 @@ def run(
                             "requested_model": model,
                             "manifest": manifest,
                             "served_model": reply["served_model"],
+                            "model_digest": digests[model],
                             "options": options,
                             "show": shows[model],
                             "completion": reply["content"],
@@ -196,9 +270,9 @@ def run(
                         }
                     ),
                 )
-                rebuild_csv(raw_dir, rows_csv)
+                rebuild_csv(raw_dir, rows_csv, models)
         print(f"round {rnd} done at {time.time() - start:.0f}s", flush=True)
-    rebuild_csv(raw_dir, rows_csv)
+    rebuild_csv(raw_dir, rows_csv, models)
     print(f"total wall {time.time() - start:.0f}s", flush=True)
 
 

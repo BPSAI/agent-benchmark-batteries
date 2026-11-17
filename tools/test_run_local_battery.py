@@ -169,10 +169,10 @@ class RunnerTests(unittest.TestCase):
     def test_raw_dir_with_files_but_no_run_manifest_is_refused(self):
         """P1: raw files of unknown provenance never enter a rebuilt CSV."""
         self.run_it(FakeClient(), models=("m1",))
-        (self.raw / "run.json").unlink()
+        (self.raw / rlb.RUN_MANIFEST).unlink()
         with self.assertRaises(SystemExit) as cm:
             self.run_it(FakeClient(), models=("m1",))
-        self.assertIn("run.json", str(cm.exception))
+        self.assertIn(rlb.RUN_MANIFEST, str(cm.exception))
 
     def test_rebuild_skips_nothing_and_admits_no_foreign_arm(self):
         """P1: a raw file whose arm is outside the run's panel is refused."""
