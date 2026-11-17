@@ -31,6 +31,7 @@ results/
   README.md                           what those rows are (and aren't)
 tools/
   score_completion.py         substring/shape scorer for the fixtures' expected_shape
+  run_local_battery.py        local-Ollama runner: interleaved arms, atomic raw files, served-model capture
   test_*.py                   unit tests for the scorer (run in CI)
 governance/
   denylist.txt                the content deny-list

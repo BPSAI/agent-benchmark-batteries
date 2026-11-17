@@ -53,9 +53,12 @@ of the reporting table in the kit.
   so the saturation finding below survives the correction. The raw
   completions are not committed.
   The rows were produced by the first version of `tools/run_local_battery.py`,
-  which is not part of this PR. The runner ships in the follow-up PR #4 (same
-  file path); the exact commit that produced the rows is in the branch history
-  of that PR and of this one, and a squash merge will not preserve it.
+  commit `6962531`, which is reachable through `refs/pull/3/head` (the squash
+  merge of #3 did not keep it on `main`). The runner on `main` arrives with
+  #5, which supersedes #4, at the same file path. That later version adds
+  run-level pins (model panel, weights digests, scorer and runner hashes,
+  fixture set), so its output is stricter than the version that made these
+  rows.
 - No API call was made. Every completion came from a model running locally.
 - Raw completions are not committed; only the five-column rows are.
 
