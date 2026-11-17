@@ -43,9 +43,23 @@ HOST = "http://127.0.0.1:11434"
 COLUMNS = ["model_id", "fixture_id", "outcome", "format_variant", "base_task_id"]
 RUN_MANIFEST = "run.manifest"
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\Z")
-SCORER_SHA256 = hashlib.sha256(
-    (Path(__file__).parent / "score_completion.py").read_bytes()
-).hexdigest()
+TOOLS = Path(__file__).resolve().parent
+# The scorer and every local module it imports: a change to any of them is a
+# different grader. A test parses score_completion.py's imports to keep this
+# list complete.
+SCORER_FILES = ("score_completion.py", "shape_rules.py")
+
+
+def _files_sha256(names) -> str:
+    h = hashlib.sha256()
+    for name in sorted(names):
+        h.update(name.encode() + b"\0" + (TOOLS / name).read_bytes() + b"\0")
+    return h.hexdigest()
+
+
+SCORER_SHA256 = _files_sha256(SCORER_FILES)
+RUNNER_SHA256 = _files_sha256(("run_local_battery.py",))
+DEFAULT_REGISTRY = "registry.ollama.ai/"
 
 
 def _post(path: str, payload: dict) -> dict:
@@ -79,10 +93,9 @@ class OllamaClient:
         req = urllib.request.Request(HOST + "/api/tags")
         with urllib.request.urlopen(req, timeout=60) as resp:
             tags = json.load(resp).get("models", [])
+        want = _normalize_name(model)
         for t in tags:
-            if t.get("name") == model or t.get("model") == model or (
-                ":" not in model and t.get("name") == model + ":latest"
-            ):
+            if want in (_normalize_name(t.get("name", "")), _normalize_name(t.get("model", ""))):
                 return t.get("digest", "")
         sys.exit(f"refusing: {model!r} is not in the local model list")
 
@@ -135,21 +148,38 @@ def _check_existing(path: Path, model: str, manifest: dict) -> None:
             )
 
 
+def _now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
 def _write_atomic(path: Path, text: str) -> None:
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(text)
     os.replace(tmp, path)
 
 
+def _normalize_name(name: str) -> str:
+    """Ollama's own name rules: the default registry and `library/` namespace
+    are implied, names compare case-insensitively, and a missing tag is
+    `:latest`."""
+    n = name.strip().lower()
+    if n.startswith(DEFAULT_REGISTRY):
+        n = n[len(DEFAULT_REGISTRY):]
+    if n.startswith("library/"):
+        n = n[len("library/"):]
+    last = n.rsplit("/", 1)[-1]
+    return n if ":" in last else n + ":latest"
+
+
 def _same_model(requested: str, served: str) -> bool:
-    """Ollama echoes the tag it served; a bare name resolves to `:latest`."""
-    if served == requested:
-        return True
-    return ":" not in requested and served == requested + ":latest"
+    """Ollama echoes the requested id, so this mainly catches a proxy that
+    rewrites it. The weights digest, re-read every round, is what pins the
+    weights."""
+    return _normalize_name(requested) == _normalize_name(served)
 
 
 def _raw_files(raw_dir: Path) -> list[Path]:
-    return [p for p in raw_dir.glob("*.json") if p.name != RUN_MANIFEST]
+    return list(raw_dir.glob("*.json"))
 
 
 def _check_run(raw_dir: Path, run_manifest: dict) -> None:
@@ -166,7 +196,14 @@ def _check_run(raw_dir: Path, run_manifest: dict) -> None:
         _write_atomic(path, json.dumps(run_manifest, indent=1, sort_keys=True))
         return
     stored = json.loads(path.read_text())
-    for field in ("models", "options", "scorer_sha256", "model_digests"):
+    for field in (
+        "models",
+        "options",
+        "scorer_sha256",
+        "runner_sha256",
+        "fixture_ids",
+        "model_digests",
+    ):
         if stored.get(field) != run_manifest[field]:
             what = "digest" if field == "model_digests" else field
             sys.exit(
@@ -224,12 +261,21 @@ def run(
             "models": list(models),
             "options": options,
             "scorer_sha256": SCORER_SHA256,
+            "runner_sha256": RUNNER_SHA256,
+            "fixture_ids": sorted(fx["id"] for fx in fixtures),
             "model_digests": digests,
+            "started_at_utc": _now(),
         },
     )
     shows = {m: client.show(m) for m in models}
     start = time.time()
     for rnd in range(1, rounds + 1):
+        now = {m: client.digest(m) for m in models}
+        if now != digests:
+            sys.exit(
+                f"refusing: model weights digest changed during the run "
+                f"({digests!r} -> {now!r}); start a fresh RAW_DIR"
+            )
         for fx in fixtures:
             for model in models:
                 path = _raw_path(raw_dir, rnd, model, fx["id"])
@@ -256,6 +302,7 @@ def run(
                             "manifest": manifest,
                             "served_model": reply["served_model"],
                             "model_digest": digests[model],
+                            "completed_at_utc": _now(),
                             "options": options,
                             "show": shows[model],
                             "completion": reply["content"],
@@ -272,6 +319,11 @@ def run(
                 )
                 rebuild_csv(raw_dir, rows_csv, models)
         print(f"round {rnd} done at {time.time() - start:.0f}s", flush=True)
+    if {m: client.digest(m) for m in models} != digests:
+        sys.exit(
+            "refusing: model weights digest changed during the last round; "
+            "start a fresh RAW_DIR"
+        )
     rebuild_csv(raw_dir, rows_csv, models)
     print(f"total wall {time.time() - start:.0f}s", flush=True)
 

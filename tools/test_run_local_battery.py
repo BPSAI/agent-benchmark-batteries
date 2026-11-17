@@ -259,6 +259,13 @@ class RunnerTests(unittest.TestCase):
             self.run_it(client, models=("m1",), rounds=2)
         self.assertIn("digest", str(cm.exception))
 
+    def test_weights_replaced_during_the_last_round_stop_the_run(self):
+        """MINOR 2: a swap during the final round is caught before the CSV is rebuilt."""
+        client = FakeClient(digests={"m1": lambda n: "sha256:a" if n < 2 else "sha256:b"})
+        with self.assertRaises(SystemExit) as cm:
+            self.run_it(client, models=("m1",), rounds=1)
+        self.assertIn("digest", str(cm.exception))
+
     def test_name_normalization_matches_ollama(self):
         """MINOR 3: default registry and namespace dropped, case-insensitive, :latest implied."""
         n = rlb._normalize_name
